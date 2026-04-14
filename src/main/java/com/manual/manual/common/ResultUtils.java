@@ -1,0 +1,27 @@
+package com.manual.manual.common;
+
+public final class ResultUtils {
+
+    private ResultUtils() {
+    }
+
+    public static <T> BaseResponse<T> success(T data) {
+        return new BaseResponse<>(0, data, "ok");
+    }
+
+    public static <T> BaseResponse<T> success(T data, String message) {
+        return new BaseResponse<>(0, data, message);
+    }
+
+    public static BaseResponse<Object> error(ErrorCode errorCode) {
+        return new BaseResponse<>(errorCode);
+    }
+
+    public static BaseResponse<Object> error(int code, String message) {
+        return new BaseResponse<>(code, null, message);
+    }
+
+    public static BaseResponse<Object> error(ErrorCode errorCode, String message) {
+        return new BaseResponse<>(errorCode.getCode(), null, message);
+    }
+}

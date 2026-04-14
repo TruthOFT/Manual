@@ -21,6 +21,10 @@ export const useUserStore = defineStore('user', {
             this.currentUser = user
             this.initialized = true
         },
+        clearCurrentUser() {
+            this.currentUser = null
+            this.initialized = true
+        },
         async fetchCurrentUser() {
             try {
                 const user = await getCurrentUser()
@@ -34,7 +38,7 @@ export const useUserStore = defineStore('user', {
         },
         async logout() {
             await logoutUser()
-            this.currentUser = null
+            this.clearCurrentUser()
         },
     },
 })

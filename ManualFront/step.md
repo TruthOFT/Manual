@@ -8,3 +8,8 @@
 - Migrated the visible storefront and auth flow to Ant Design Vue, installed `ant-design-vue` plus `@ant-design/icons-vue`, and replaced text-only cards with image-backed category, product, artisan, and order cards.
 - Re-skinned the Ant Design Vue buttons so they keep the original warm rounded gradient / soft secondary visual language instead of the library defaults.
 - Fixed the hero button text alignment so the custom-styled Ant buttons render with centered labels.
+- Switched the front-end request layer to an axios wrapper aligned with the WatchMall style, removed hard-coded `/api` duplication from the API modules, and added centralized 401 login-expiration handling with store cleanup and redirect support.
+- Connected the login/register pages to the new `Manual` backend endpoints so registration, login, logout, and current-user fetch now follow the real session-based backend contract.
+- Fixed the Ant auth form submit wiring by changing the primary login/register buttons to call `handleSubmit` directly and binding the form model explicitly, avoiding the previous click-with-no-request issue.
+- Updated `src/components/layout/LandingNav.vue` to use Chinese navigation text, keep only a login button for guests, and show a logged-in dropdown menu with user settings and logout actions after sign-in.
+- Translated `src/views/LoginView.vue` and `src/views/RegisterView.vue` to Chinese so the auth experience matches the rest of the storefront navigation and product language.

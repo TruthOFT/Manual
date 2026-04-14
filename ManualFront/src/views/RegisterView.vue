@@ -21,22 +21,22 @@ async function handleSubmit() {
     errorMessage.value = ''
 
     if (!form.userAccount.trim() || !form.userPassword.trim() || !form.checkPassword.trim()) {
-        errorMessage.value = 'Please fill in every field.'
+        errorMessage.value = '请完整填写所有字段。'
         return
     }
 
     if (form.userAccount.trim().length < 4) {
-        errorMessage.value = 'Account length must be at least 4 characters.'
+        errorMessage.value = '账号长度至少为 4 位。'
         return
     }
 
     if (form.userPassword.length < 8) {
-        errorMessage.value = 'Password length must be at least 8 characters.'
+        errorMessage.value = '密码长度至少为 8 位。'
         return
     }
 
     if (form.userPassword !== form.checkPassword) {
-        errorMessage.value = 'The two passwords do not match.'
+        errorMessage.value = '两次输入的密码不一致。'
         return
     }
 
@@ -59,7 +59,7 @@ async function handleSubmit() {
             query: nextQuery,
         })
     } catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : 'Registration failed. Please try again later.'
+        errorMessage.value = error instanceof Error ? error.message : '注册失败，请稍后重试。'
     } finally {
         loading.value = false
     }
@@ -73,67 +73,78 @@ async function handleSubmit() {
 
         <section class="auth-shell">
             <a-card class="story-card" :bordered="false">
-                <p class="eyebrow">create your shop account</p>
-                <h1>Bring your products, artisan rhythm, and store story into one clean system.</h1>
+                <p class="eyebrow">创建门店账号</p>
+                <h1>把你的商品、匠人节奏与门店故事放进一个清晰统一的系统中。</h1>
                 <p class="lead">
-                    Registration uses only the minimal fields already supported by the planned backend contract, so later integration stays simple.
+                    当前注册只保留后端已经支持的最小字段，后续继续接业务接口时不需要再重做这一页。
                 </p>
 
                 <div class="feature-grid">
                     <a-card class="mini-card" :bordered="false">
-                        <strong>Curated drops</strong>
-                        <p>Keep hero products, seasonal sets, and custom runs organized in one flow.</p>
+                        <strong>精选上新</strong>
+                        <p>把主推商品、节日礼盒和定制系列统一整理到一个流程里。</p>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <strong>Store pulse</strong>
-                        <p>Use the home page to read sales rhythm, featured categories, and order motion.</p>
+                        <strong>门店节奏</strong>
+                        <p>通过首页快速查看销量变化、主推分类和订单动态。</p>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <strong>Artisan network</strong>
-                        <p>Keep makers, studios, and display stories within the same product language.</p>
+                        <strong>匠人协作</strong>
+                        <p>把手作人、工作室与品牌展示统一在同一套门店语言里。</p>
                     </a-card>
                 </div>
             </a-card>
 
             <a-card class="form-card" :bordered="false">
-                <p class="card-label">start onboarding</p>
-                <h2>Create an account</h2>
-                <p class="card-copy">This page is intentionally small now, so the later backend hookup does not require another redesign.</p>
+                <p class="card-label">开始注册</p>
+                <h2>创建账号</h2>
+                <p class="card-copy">先完成基础注册，后面接入真实业务接口时就不需要再重做页面结构。</p>
 
                 <a-alert v-if="errorMessage" class="alert" type="error" :message="errorMessage" show-icon />
 
-                <a-form layout="vertical" class="form" @finish="handleSubmit">
-                    <a-form-item label="Account" name="userAccount">
-                        <a-input v-model:value="form.userAccount" size="large" placeholder="At least 4 characters">
+                <a-form :model="form" layout="vertical" class="form">
+                    <a-form-item label="账号" name="userAccount">
+                        <a-input v-model:value="form.userAccount" size="large" placeholder="请输入至少 4 位账号">
                             <template #prefix>
                                 <UserOutlined />
                             </template>
                         </a-input>
                     </a-form-item>
 
-                    <a-form-item label="Password" name="userPassword">
-                        <a-input-password v-model:value="form.userPassword" size="large" placeholder="At least 8 characters">
+                    <a-form-item label="密码" name="userPassword">
+                        <a-input-password v-model:value="form.userPassword" size="large"
+                            placeholder="请输入至少 8 位密码">
                             <template #prefix>
                                 <LockOutlined />
                             </template>
                         </a-input-password>
                     </a-form-item>
 
-                    <a-form-item label="Confirm password" name="checkPassword">
-                        <a-input-password v-model:value="form.checkPassword" size="large" placeholder="Repeat password">
+                    <a-form-item label="确认密码" name="checkPassword">
+                        <a-input-password v-model:value="form.checkPassword" size="large" placeholder="请再次输入密码">
                             <template #prefix>
                                 <LockOutlined />
                             </template>
                         </a-input-password>
                     </a-form-item>
 
-                    <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" html-type="submit" block :loading="loading">Create account</a-button>
+                    <a-button
+                        class="manual-ant-btn manual-ant-btn-primary"
+                        size="large"
+                        html-type="button"
+                        block
+                        :loading="loading"
+                        @click="handleSubmit"
+                    >
+                        注册账号
+                    </a-button>
                 </a-form>
 
                 <p class="switch-copy">
-                    Already registered?
-                    <RouterLink :to="{ path: '/login', query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined }">
-                        Sign in
+                    已有账号？
+                    <RouterLink
+                        :to="{ path: '/login', query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined }">
+                        去登录
                     </RouterLink>
                 </p>
             </a-card>

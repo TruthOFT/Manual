@@ -1,32 +1,46 @@
 <script setup lang="ts">
-import { UserOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { useUserStore } from '@/stores/user'
 
 const navItems = [
-    { label: 'Featured', href: '#products' },
-    { label: 'Artisans', href: '#artisans' },
-    { label: 'Orders', href: '#orders' },
-    { label: 'Join', href: '#cta' },
+    { label: '精选作品', href: '#products' },
+    { label: '匠人工作室', href: '#artisans' },
+    { label: '订单动态', href: '#orders' },
+    { label: '入驻合作', href: '#cta' },
 ]
 
+const router = useRouter()
 const userStore = useUserStore()
 
-const displayName = computed(() => userStore.currentUser?.username || userStore.currentUser?.userAccount || 'Store Partner')
+const displayName = computed(() => userStore.currentUser?.username || userStore.currentUser?.userAccount || '门店用户')
+
+async function handleMenuClick({ key }: { key: string }) {
+    if (key === 'settings') {
+        message.info('用户设置页面稍后接入')
+        return
+    }
+    if (key === 'logout') {
+        await userStore.logout()
+        await router.push('/')
+    }
+}
 </script>
 
 <template>
     <div class="nav">
-        <RouterLink class="brand" to="/" aria-label="HandMade Manual home">
+        <RouterLink class="brand" to="/" aria-label="手工创意门店首页">
             <span class="mark">hm</span>
             <span class="brand-copy">
-                <strong>HandMade Manual</strong>
-                <small>creative shop system</small>
+                <strong>手工创意门店</strong>
+                <small>门店管理系统</small>
             </span>
         </RouterLink>
 
-        <nav class="links" aria-label="Section navigation">
+        <nav class="links" aria-label="页面导航">
             <a v-for="item in navItems" :key="item.href" :href="item.href">
                 {{ item.label }}
             </a>
@@ -34,21 +48,33 @@ const displayName = computed(() => userStore.currentUser?.username || userStore.
 
         <div class="actions">
             <template v-if="userStore.isLoggedIn">
-                <div class="user-pill">
-                    <a-avatar :size="32" class="user-avatar">
-                        <template #icon>
-                            <UserOutlined />
-                        </template>
-                    </a-avatar>
-                    <span>{{ displayName }}</span>
-                </div>
+                <a-dropdown placement="bottomRight" trigger="click">
+                    <button class="user-pill" type="button">
+                        <a-avatar :size="32" class="user-avatar" :src="userStore.currentUser?.avatarUrl">
+                            <template #icon>
+                                <UserOutlined />
+                            </template>
+                        </a-avatar>
+                        <span>{{ displayName }}</span>
+                        <DownOutlined class="menu-arrow" />
+                    </button>
+                    <template #overlay>
+                        <a-menu @click="handleMenuClick">
+                            <a-menu-item key="settings">
+                                <SettingOutlined />
+                                <span>用户设置</span>
+                            </a-menu-item>
+                            <a-menu-item key="logout">
+                                <LogoutOutlined />
+                                <span>退出登录</span>
+                            </a-menu-item>
+                        </a-menu>
+                    </template>
+                </a-dropdown>
             </template>
             <template v-else>
-                <RouterLink to="/register">
-                    <a-button class="manual-ant-btn manual-ant-btn-soft" size="large">Register</a-button>
-                </RouterLink>
                 <RouterLink to="/login">
-                    <a-button class="manual-ant-btn manual-ant-btn-primary" size="large">Login</a-button>
+                    <a-button class="manual-ant-btn manual-ant-btn-primary" size="large">登录</a-button>
                 </RouterLink>
             </template>
         </div>
@@ -143,10 +169,16 @@ const displayName = computed(() => userStore.currentUser?.username || userStore.
     color: var(--text-strong);
     font-weight: 800;
     white-space: nowrap;
+    cursor: pointer;
 }
 
 .user-avatar {
     background: linear-gradient(135deg, #ffbf8f, #f28a67);
+}
+
+.menu-arrow {
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
 @media (max-width: 1120px) {

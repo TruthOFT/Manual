@@ -33,7 +33,7 @@ watch(
 watch(
     () => route.query.registered,
     (registered) => {
-        successMessage.value = registered === '1' ? 'Registration complete. Sign in to enter the store system.' : ''
+        successMessage.value = registered === '1' ? '注册成功，请登录后进入门店管理系统。' : ''
     },
     { immediate: true },
 )
@@ -42,7 +42,7 @@ async function handleSubmit() {
     errorMessage.value = ''
 
     if (!form.userAccount.trim() || !form.userPassword.trim()) {
-        errorMessage.value = 'Please enter account and password.'
+        errorMessage.value = '请输入账号和密码。'
         return
     }
 
@@ -57,7 +57,7 @@ async function handleSubmit() {
         const redirect = typeof route.query.redirect === 'string' && route.query.redirect.length > 0 ? route.query.redirect : '/'
         await router.push(redirect)
     } catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : 'Login failed. Please try again later.'
+        errorMessage.value = error instanceof Error ? error.message : '登录失败，请稍后重试。'
     } finally {
         loading.value = false
     }
@@ -71,45 +71,45 @@ async function handleSubmit() {
 
         <section class="auth-shell">
             <a-card class="story-card" :bordered="false">
-                <p class="eyebrow">creative shop login</p>
-                <h1>Keep every artisan, product drop, and order flow in one warm storefront system.</h1>
+                <p class="eyebrow">门店账号登录</p>
+                <h1>把匠人、商品、订单和门店运营都收进同一个有温度的系统里。</h1>
                 <p class="lead">
-                    Sign in to continue with featured products, operating signals, and a front-end structure already aligned with the later backend integration.
+                    登录后即可继续管理精选商品、门店数据和运营状态，当前页面结构也已经和后续后端接口保持对接方向一致。
                 </p>
 
                 <div class="feature-grid">
                     <a-card class="mini-card" :bordered="false">
-                        <span>Today</span>
-                        <strong>12 drops</strong>
-                        <small>Ceramic, scent, and wood collections refreshed together.</small>
+                        <span>今日上新</span>
+                        <strong>12 款</strong>
+                        <small>陶艺、香氛与木作系列同步更新。</small>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <span>Repeat rate</span>
+                        <span>复购率</span>
                         <strong>64%</strong>
-                        <small>Gift bundles and textile pieces continue to convert steadily.</small>
+                        <small>礼盒组合与布艺单品持续稳定成交。</small>
                     </a-card>
                 </div>
             </a-card>
 
             <a-card class="form-card" :bordered="false">
-                <p class="card-label">welcome back</p>
-                <h2>Login to the shop</h2>
-                <p class="card-copy">Use your account to continue into the handmade creative shop system.</p>
+                <p class="card-label">欢迎回来</p>
+                <h2>登录门店系统</h2>
+                <p class="card-copy">使用你的账号继续进入手工创意门店管理系统。</p>
 
                 <a-alert v-if="successMessage" class="alert" type="success" :message="successMessage" show-icon />
                 <a-alert v-if="errorMessage" class="alert" type="error" :message="errorMessage" show-icon />
 
-                <a-form layout="vertical" class="form" @finish="handleSubmit">
-                    <a-form-item label="Account" name="userAccount">
-                        <a-input v-model:value="form.userAccount" size="large" placeholder="Enter userAccount">
+                <a-form :model="form" layout="vertical" class="form">
+                    <a-form-item label="账号" name="userAccount">
+                        <a-input v-model:value="form.userAccount" size="large" placeholder="请输入登录账号">
                             <template #prefix>
                                 <UserOutlined />
                             </template>
                         </a-input>
                     </a-form-item>
 
-                    <a-form-item label="Password" name="userPassword">
-                        <a-input-password v-model:value="form.userPassword" size="large" placeholder="Enter userPassword">
+                    <a-form-item label="密码" name="userPassword">
+                        <a-input-password v-model:value="form.userPassword" size="large" placeholder="请输入登录密码">
                             <template #prefix>
                                 <LockOutlined />
                             </template>
@@ -117,16 +117,25 @@ async function handleSubmit() {
                     </a-form-item>
 
                     <div class="form-foot">
-                        <a-checkbox v-model:checked="form.rememberMe">Keep me signed in for 7 days</a-checkbox>
+                        <a-checkbox v-model:checked="form.rememberMe">7 天内保持登录</a-checkbox>
                     </div>
 
-                    <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" html-type="submit" block :loading="loading">Sign in</a-button>
+                    <a-button
+                        class="manual-ant-btn manual-ant-btn-primary"
+                        size="large"
+                        html-type="button"
+                        block
+                        :loading="loading"
+                        @click="handleSubmit"
+                    >
+                        登录
+                    </a-button>
                 </a-form>
 
                 <p class="switch-copy">
-                    Need an account?
+                    还没有账号？
                     <RouterLink :to="{ path: '/register', query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined }">
-                        Create one
+                        立即注册
                     </RouterLink>
                 </p>
             </a-card>

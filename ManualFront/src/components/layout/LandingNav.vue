@@ -1,21 +1,30 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
+import { UserOutlined } from '@ant-design/icons-vue'
+import { computed } from 'vue'
+
+import { useUserStore } from '@/stores/user'
+
 const navItems = [
-    { label: 'pets', href: '#pets' },
-    { label: 'filters', href: '#filters' },
-    { label: 'stories', href: '#stories' },
-    { label: 'shelters', href: '#partners' },
+    { label: 'Featured', href: '#products' },
+    { label: 'Artisans', href: '#artisans' },
+    { label: 'Orders', href: '#orders' },
+    { label: 'Join', href: '#cta' },
 ]
+
+const userStore = useUserStore()
+
+const displayName = computed(() => userStore.currentUser?.username || userStore.currentUser?.userAccount || 'Store Partner')
 </script>
 
 <template>
     <div class="nav">
-        <a class="brand" href="#top" aria-label="Kindred Tails home">
-            <span class="mark">kt</span>
+        <RouterLink class="brand" to="/" aria-label="HandMade Manual home">
+            <span class="mark">hm</span>
             <span class="brand-copy">
-                <strong>Kindred Tails</strong>
-                <small>adopt with heart</small>
+                <strong>HandMade Manual</strong>
+                <small>creative shop system</small>
             </span>
-        </a>
+        </RouterLink>
 
         <nav class="links" aria-label="Section navigation">
             <a v-for="item in navItems" :key="item.href" :href="item.href">
@@ -23,7 +32,26 @@ const navItems = [
             </a>
         </nav>
 
-        <a class="btn btn-ghost" href="#cta">start matching</a>
+        <div class="actions">
+            <template v-if="userStore.isLoggedIn">
+                <div class="user-pill">
+                    <a-avatar :size="32" class="user-avatar">
+                        <template #icon>
+                            <UserOutlined />
+                        </template>
+                    </a-avatar>
+                    <span>{{ displayName }}</span>
+                </div>
+            </template>
+            <template v-else>
+                <RouterLink to="/register">
+                    <a-button class="manual-ant-btn manual-ant-btn-soft" size="large">Register</a-button>
+                </RouterLink>
+                <RouterLink to="/login">
+                    <a-button class="manual-ant-btn manual-ant-btn-primary" size="large">Login</a-button>
+                </RouterLink>
+            </template>
+        </div>
     </div>
 </template>
 
@@ -96,31 +124,29 @@ const navItems = [
     color: var(--text-strong);
 }
 
-.btn {
+.actions {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.user-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     min-height: 52px;
-    padding: 0 24px;
-    border: 1px solid transparent;
+    padding: 0 14px;
     border-radius: 999px;
-    font-weight: 800;
-    transition:
-        transform 0.24s ease,
-        box-shadow 0.24s ease,
-        background-color 0.24s ease,
-        border-color 0.24s ease;
-}
-
-.btn:hover,
-.btn:focus-visible {
-    transform: translateY(-2px);
-}
-
-.btn-ghost {
-    background: transparent;
-    border-color: var(--line-strong);
+    background: linear-gradient(135deg, rgba(255, 243, 231, 0.95), rgba(255, 234, 214, 0.95));
+    border: 1px solid rgba(212, 149, 115, 0.3);
     color: var(--text-strong);
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.user-avatar {
+    background: linear-gradient(135deg, #ffbf8f, #f28a67);
 }
 
 @media (max-width: 1120px) {
@@ -141,11 +167,24 @@ const navItems = [
     }
 
     .links,
-    .btn {
+    .actions {
         width: 100%;
     }
 
     .links {
+        justify-content: center;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .actions :deep(.ant-btn) {
+        width: 100%;
+    }
+
+    .user-pill {
+        width: 100%;
         justify-content: center;
     }
 }

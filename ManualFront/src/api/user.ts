@@ -9,14 +9,14 @@ export function loginUser(data: UserLoginRequest) {
 }
 
 export function registerUser(data: UserRegisterRequest) {
-    return request<LoginUser>('/api/user/register', {
+    return request<number>('/api/user/register', {
         method: 'POST',
         body: JSON.stringify(data),
     })
 }
 
 export function getCurrentUser() {
-    return request<LoginUser | null>('/api/user/current')
+    return request<LoginUser | null>('/api/user/get/login')
 }
 
 export function logoutUser() {

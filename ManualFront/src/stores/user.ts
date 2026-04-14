@@ -30,6 +30,7 @@ export const useUserStore = defineStore('user', {
             } finally {
                 this.initialized = true
             }
+            return this.currentUser
         },
         async logout() {
             await logoutUser()

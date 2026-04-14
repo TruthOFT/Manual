@@ -1,80 +1,53 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
+import {
+    ArrowRightOutlined,
+    FireOutlined,
+    GiftOutlined,
+    ShoppingOutlined,
+    ShopOutlined,
+    TeamOutlined,
+} from '@ant-design/icons-vue'
+
 import LandingNav from '@/components/layout/LandingNav.vue'
-const filters = [
-    { label: 'good with kids', count: '128', active: true },
-    { label: 'apartment friendly', count: '76', active: true },
-    { label: 'senior pets', count: '34', active: false },
-    { label: 'low shedding', count: '49', active: true },
-]
+import { homePageMock } from '@/mocks/home'
 
-const pets = [
+const homeData = homePageMock
+
+const dashboardStats = [
     {
-        name: 'Maple',
-        breed: 'golden retriever mix',
-        age: '2 years old',
-        energy: 'gentle zoomies',
-        status: 'ready for meet-and-greet',
-        tone: 'apricot',
-        story: 'Maple loves soft blankets, easy walks, and leaning into every new friend she meets.',
-        traits: ['house trained', 'kid approved', 'snuggle expert'],
+        label: 'Today revenue',
+        value: 1224,
+        prefix: 'CNY',
+        icon: FireOutlined,
+        note: 'Gift sets and runners continue to convert.',
     },
     {
-        name: 'Milo',
-        breed: 'tabby explorer',
-        age: '10 months old',
-        energy: 'playful and curious',
-        status: 'foster-to-adopt open',
-        tone: 'mint',
-        story: 'Milo turns windowsills into adventure decks and settles down the second a lap appears.',
-        traits: ['litter trained', 'sweet with cats', 'sunbeam collector'],
+        label: 'Live products',
+        value: 62,
+        icon: ShoppingOutlined,
+        note: 'Small-batch drops keep the page feeling fresh.',
     },
     {
-        name: 'Poppy',
-        breed: 'terrier sweetheart',
-        age: '4 years old',
-        energy: 'balanced companion',
-        status: 'weekend adoption event',
-        tone: 'gold',
-        story: 'Poppy thrives on routine, happy tail wags, and greeting neighbors like old friends.',
-        traits: ['leash confident', 'calm indoors', 'loves car rides'],
+        label: 'Maker partners',
+        value: 18,
+        icon: TeamOutlined,
+        note: 'Ceramic, wood, textile, and scent studios included.',
     },
 ]
 
-const stories = [
-    {
-        family: 'The Bennett family',
-        pet: 'Luna',
-        quote: 'The profile told us exactly who Luna was. By the time we met, it felt like we already knew her rhythm.',
-        result: 'Matched in 6 days with a home prep checklist and post-adoption support.',
-    },
-    {
-        family: 'Mia and Jordan',
-        pet: 'Ollie',
-        quote: 'The filter preview helped us find a dog who loved hikes but could still settle in a small apartment.',
-        result: 'Adoption completed after one video intro and one in-person visit.',
-    },
+const operatingHighlights = [
+    'Custom gift boxes and brand bundles are already part of the story.',
+    'The layout is prepared for later backend data replacement.',
+    'Public storefront storytelling and operating signals share one visual system.',
 ]
 
-const partners = [
-    {
-        name: 'sunrise rescue network',
-        city: 'portland, or',
-        focus: 'family-ready dogs and shy companion cats',
-        support: ['verified medical records', 'same-day review', 'new adopter orientation'],
-    },
-    {
-        name: 'harbor paws collective',
-        city: 'austin, tx',
-        focus: 'foster-based placements with behavior notes',
-        support: ['virtual meetups', 'transport coordination', 'settling guidance'],
-    },
-    {
-        name: 'meadow street shelter',
-        city: 'nashville, tn',
-        focus: 'senior pets and bonded pair adoptions',
-        support: ['fee-waived senior events', 'care plan templates', 'partner vet discounts'],
-    },
-]
+function getPriceRange(minPrice: number, maxPrice: number) {
+    return minPrice === maxPrice ? `CNY ${minPrice}` : `CNY ${minPrice} - ${maxPrice}`
+}
+
+function getSupportLabel(supportCustom: number) {
+    return supportCustom ? 'Custom ready' : 'Retail stock'
+}
 </script>
 
 <template>
@@ -82,278 +55,546 @@ const partners = [
         <section class="hero shell" id="top">
             <LandingNav />
 
-
             <div class="hero-grid">
-                <div>
-                    <p class="eyebrow">warm welcomes, trusted shelters, happier homes</p>
-                    <h1>Find the pet who already feels like part of your family.</h1>
+                <div class="hero-copy">
+                    <p class="eyebrow">creative retail, artisan stories, warm operations</p>
+                    <h1>Shape the handmade creative shop into a storefront that feels premium and operational at first glance.</h1>
                     <p class="lead">
-                        Explore motion-rich pet cards, thoughtful filter previews, and real adoption journeys designed to
-                        make every match feel personal from the first click.
+                        This first home page uses mock data to carry the brand story, featured work, artisan partners, and order movement. Later backend work can swap the data source without changing the structure.
                     </p>
-                    <div class="actions">
-                        <a class="btn btn-primary" href="#pets">meet featured pets</a>
-                        <a class="btn btn-soft" href="#partners">partner with a shelter</a>
-                    </div>
-                    <dl class="stats">
-                        <div><dt>1,240+</dt><dd>successful matches this year</dd></div>
-                        <div><dt>92%</dt><dd>applications answered in under 48 hours</dd></div>
-                        <div><dt>38</dt><dd>verified rescue partners nationwide</dd></div>
-                    </dl>
-                </div>
 
-                <div class="hero-card">
-                    <div class="glow glow-coral"></div>
-                    <div class="glow glow-gold"></div>
-                    <article class="match-card">
-                        <span class="label">today's warm matches</span>
-                        <h2>3 pets align with your vibe</h2>
-                        <div class="chips">
-                            <span>calm at home</span>
-                            <span>first-time adopter friendly</span>
-                            <span>weekend visits available</span>
-                        </div>
-                        <div class="mini-list">
-                            <article v-for="(pet, index) in pets.slice(0, 2)" :key="pet.name" :class="['mini', pet.tone]" :style="{ '--delay': `${index * 140}ms` }">
-                                <div class="avatar">{{ pet.name.slice(0, 1) }}</div>
-                                <div>
-                                    <strong>{{ pet.name }}</strong>
-                                    <small>{{ pet.breed }}</small>
-                                </div>
-                                <span>{{ pet.energy }}</span>
-                            </article>
-                        </div>
-                    </article>
-                </div>
-            </div>
-        </section>
+                    <a-space size="middle" wrap>
+                        <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" href="#products">View featured work</a-button>
+                        <a-button class="manual-ant-btn manual-ant-btn-soft" size="large" href="#cta">Apply to join</a-button>
+                    </a-space>
 
-        <section class="shell section" id="pets">
-            <p class="eyebrow">motion-driven pet cards</p>
-            <h2>Profiles that feel lively before you even schedule a visit.</h2>
-            <p class="intro">Each card surfaces personality, readiness, and lifestyle fit so adopters can move from curiosity to confidence without guesswork.</p>
-            <div class="pet-grid">
-                <article v-for="(pet, index) in pets" :key="pet.name" :class="['pet', pet.tone]" :style="{ '--card-delay': `${index * 120}ms` }">
-                    <div class="pet-visual">
-                        <span class="pulse"></span>
-                        <div class="monogram">{{ pet.name.slice(0, 1) }}</div>
-                        <span class="status">{{ pet.status }}</span>
-                    </div>
-                    <div class="pet-head">
-                        <div>
-                            <h3>{{ pet.name }}</h3>
-                            <p>{{ pet.breed }}</p>
-                        </div>
-                        <strong>{{ pet.age }}</strong>
-                    </div>
-                    <p>{{ pet.story }}</p>
-                    <ul class="tags"><li v-for="trait in pet.traits" :key="trait">{{ trait }}</li></ul>
-                    <div class="pet-foot">
-                        <span>{{ pet.energy }}</span>
-                        <a href="#cta">adopt {{ pet.name.toLowerCase() }}</a>
-                    </div>
-                </article>
-            </div>
-        </section>
-
-        <section class="shell section" id="filters">
-            <p class="eyebrow">search filters preview</p>
-            <h2>Layer practical details with emotional fit.</h2>
-            <p class="intro">Preview filters help adopters narrow by home style, energy, and care needs while keeping the experience warm and approachable.</p>
-            <div class="two-col">
-                <article class="panel">
-                    <div class="row-head">
-                        <div>
-                            <span class="label">adoption finder</span>
-                            <h3>Refine your future sidekick</h3>
-                        </div>
-                        <span class="pill coral-pill">live preview</span>
-                    </div>
-                    <div class="filter-list">
-                        <button v-for="filter in filters" :key="filter.label" class="filter" type="button" :class="{ active: filter.active }" :aria-pressed="filter.active">
-                            <span>{{ filter.label }}</span>
-                            <strong>{{ filter.count }}</strong>
-                        </button>
-                    </div>
-                    <div class="selector-list">
-                        <div><span>home pace</span><strong>calm evenings + weekend walks</strong></div>
-                        <div><span>care experience</span><strong>first-time adopter ready</strong></div>
-                        <div><span>preferred visit</span><strong>virtual intro before in-person</strong></div>
-                    </div>
-                </article>
-                <article class="panel">
-                    <span class="label">top results</span>
-                    <p class="results-copy">Matched using routine, household size, and companionship style.</p>
-                    <div class="result-list">
-                        <article v-for="pet in pets" :key="`${pet.name}-result`" class="result">
-                            <div class="avatar small">{{ pet.name.slice(0, 1) }}</div>
-                            <div>
-                                <div class="result-title"><strong>{{ pet.name }}</strong><span>{{ pet.age }}</span></div>
-                                <p>{{ pet.breed }} • {{ pet.energy }}</p>
+                    <div class="stats-grid">
+                        <a-card v-for="item in dashboardStats" :key="item.label" class="soft-card stat-card" :bordered="false">
+                            <div class="stat-head">
+                                <component :is="item.icon" />
+                                <span>{{ item.label }}</span>
                             </div>
-                            <span class="pill mint-pill">96% match</span>
-                        </article>
+                            <a-statistic :value="item.value" :prefix="item.prefix" />
+                            <p>{{ item.note }}</p>
+                        </a-card>
                     </div>
-                </article>
-            </div>
-        </section>
+                </div>
 
-        <section class="shell section" id="stories">
-            <p class="eyebrow">success stories</p>
-            <h2>Every adoption comes with a beginning worth retelling.</h2>
-            <p class="intro">From first inquiry to the ride home, these stories show how thoughtful matching and shelter support turn a search into a lasting bond.</p>
-            <div class="two-col stories">
-                <article v-for="story in stories" :key="story.pet" class="panel story">
-                    <span class="pill mint-pill">adopted: {{ story.pet }}</span>
-                    <h3>{{ story.family }}</h3>
-                    <blockquote>{{ story.quote }}</blockquote>
-                    <p>{{ story.result }}</p>
-                </article>
-                <aside class="panel highlight">
-                    <span class="label">what adopters value most</span>
-                    <ul class="tags stacked">
-                        <li>temperament notes from foster homes</li>
-                        <li>clear timelines from application to pickup</li>
-                        <li>follow-up care tips after adoption day</li>
-                    </ul>
-                    <a class="btn btn-soft" href="#cta">read more journeys</a>
-                </aside>
-            </div>
-        </section>
+                <a-card class="hero-panel" :bordered="false">
+                    <template #cover>
+                        <a-image
+                            :preview="false"
+                            src="https://images.unsplash.com/photo-1517685352821-92cf88aee5a5?auto=format&fit=crop&w=1200&q=80"
+                            alt="handmade studio"
+                        />
+                    </template>
 
-        <section class="shell section" id="partners">
-            <p class="eyebrow">shelter partnerships</p>
-            <h2>Built to help rescue teams spotlight care, trust, and readiness.</h2>
-            <p class="intro">Partner shelters get polished profiles, transparent readiness signals, and adoption tools that feel personal instead of transactional.</p>
-            <div class="partner-grid">
-                <article v-for="partner in partners" :key="partner.name" class="panel partner">
-                    <div class="row-head">
-                        <div>
-                            <h3>{{ partner.name }}</h3>
-                            <p>{{ partner.city }}</p>
+                    <template #title>
+                        <span class="card-title">today's store pulse</span>
+                    </template>
+
+                    <p class="hero-panel-copy">One page now carries both brand atmosphere and store signals.</p>
+
+                    <div class="signal-list">
+                        <div v-for="product in homeData.featuredProducts.slice(0, 2)" :key="product.id" class="signal-item">
+                            <a-avatar shape="square" :size="56" :src="product.productCover" />
+                            <div class="signal-body">
+                                <strong>{{ product.productName }}</strong>
+                                <small>{{ product.shopName }} / {{ product.craftType }}</small>
+                            </div>
+                            <span>{{ getPriceRange(product.minPrice, product.maxPrice) }}</span>
                         </div>
-                        <span class="focus">{{ partner.focus }}</span>
                     </div>
-                    <ul class="tags"><li v-for="item in partner.support" :key="item">{{ item }}</li></ul>
-                </article>
+
+                    <a-divider />
+
+                    <a-space wrap>
+                        <a-tag v-for="item in operatingHighlights" :key="item" class="info-tag">{{ item }}</a-tag>
+                    </a-space>
+                </a-card>
             </div>
         </section>
 
-        <section class="shell cta" id="cta">
-            <div>
-                <p class="eyebrow">adoption cta</p>
-                <h2>Open your home to the pet already waiting for your routine.</h2>
-                <p>Start with a quick profile, preview pets that fit your pace, and let verified shelters guide the next steps with warmth and clarity.</p>
+        <section class="shell section" id="categories">
+            <p class="eyebrow">craft categories</p>
+            <h2>Start with clear categories so the store mood, product direction, and browsing flow feel intentional.</h2>
+            <p class="intro">Each category card maps to the existing data shape, while the visual system stays aligned with the premium warm look you already prefer.</p>
+
+            <a-row :gutter="[20, 20]">
+                <a-col v-for="category in homeData.categories" :key="category.id" :xs="24" :sm="12" :xl="6">
+                    <a-card class="soft-card image-card" hoverable :bordered="false">
+                        <template #cover>
+                            <a-image :preview="false" :src="category.categoryIcon" :alt="category.categoryName" />
+                        </template>
+                        <a-tag color="gold">level {{ category.categoryLevel }}</a-tag>
+                        <h3>{{ category.categoryName }}</h3>
+                        <p>{{ category.categoryDesc }}</p>
+                    </a-card>
+                </a-col>
+            </a-row>
+        </section>
+
+        <section class="shell section" id="products">
+            <p class="eyebrow">featured handmade products</p>
+            <h2>Let the featured cards explain the store taste now, then receive real inventory and pricing later.</h2>
+            <p class="intro">The product cards already consume the current `featuredProducts` structure, so the later backend hookup can stay focused on data replacement only.</p>
+
+            <a-row :gutter="[22, 22]">
+                <a-col v-for="product in homeData.featuredProducts" :key="product.id" :xs="24" :lg="8">
+                    <a-card class="soft-card image-card product-card" hoverable :bordered="false">
+                        <template #cover>
+                            <a-image :preview="false" :src="product.productCover" :alt="product.productName" />
+                        </template>
+
+                        <div class="product-top">
+                            <a-tag color="orange">{{ product.categoryName }}</a-tag>
+                            <a-tag color="green">{{ getSupportLabel(product.supportCustom) }}</a-tag>
+                        </div>
+
+                        <h3>{{ product.productName }}</h3>
+                        <p>{{ product.productSubtitle }}</p>
+
+                        <a-space wrap>
+                            <a-tag>{{ product.craftType }}</a-tag>
+                            <a-tag>{{ product.originPlace }}</a-tag>
+                            <a-tag>{{ product.handmadeCycleDays }} day cycle</a-tag>
+                        </a-space>
+
+                        <div class="product-foot">
+                            <span>{{ product.artisanName }} / sold {{ product.soldQuantity }}</span>
+                            <strong>{{ getPriceRange(product.minPrice, product.maxPrice) }}</strong>
+                        </div>
+                    </a-card>
+                </a-col>
+            </a-row>
+        </section>
+
+        <section class="shell section" id="artisans">
+            <p class="eyebrow">artisan partners</p>
+            <h2>Turn maker stories and studio relationships into part of the storefront value.</h2>
+            <p class="intro">This section is mock-backed now, but the visual grouping is already suitable for real artisan data once the backend is ready.</p>
+
+            <a-row :gutter="[22, 22]">
+                <a-col v-for="artisan in homeData.artisans" :key="artisan.id" :xs="24" :lg="8">
+                    <a-card class="soft-card image-card artisan-card" hoverable :bordered="false">
+                        <template #cover>
+                            <a-image :preview="false" :src="artisan.coverUrl" :alt="artisan.artisanName" />
+                        </template>
+
+                        <div class="artisan-head">
+                            <a-avatar :size="58" :src="artisan.artisanAvatar" />
+                            <div>
+                                <h3>{{ artisan.artisanName }}</h3>
+                                <p>{{ artisan.shopName }} / {{ artisan.originPlace }}</p>
+                            </div>
+                        </div>
+
+                        <a-space wrap>
+                            <a-tag color="geekblue">{{ artisan.craftCategory }}</a-tag>
+                            <a-tag>{{ artisan.experienceYears }} years</a-tag>
+                            <a-tag>{{ artisan.productCount }} products</a-tag>
+                            <a-tag :color="artisan.supportCustom ? 'green' : 'default'">{{ getSupportLabel(artisan.supportCustom) }}</a-tag>
+                        </a-space>
+                    </a-card>
+                </a-col>
+            </a-row>
+        </section>
+
+        <section class="shell section" id="orders">
+            <p class="eyebrow">recent orders</p>
+            <h2>Order activity should feel like part of the story, not just raw numbers.</h2>
+            <p class="intro">This operating block is driven by mock order data for now and is ready to be replaced with real order flow later.</p>
+
+            <div class="two-col">
+                <a-card class="soft-card" :bordered="false">
+                    <template #title>
+                        <span class="card-title">recent order rhythm</span>
+                    </template>
+                    <template #extra>
+                        <a-tag color="orange">mock data</a-tag>
+                    </template>
+
+                    <a-list :data-source="homeData.recentOrders" item-layout="horizontal">
+                        <template #renderItem="{ item }">
+                            <a-list-item>
+                                <a-list-item-meta>
+                                    <template #avatar>
+                                        <a-avatar shape="square" :size="60" :src="item.productCover" />
+                                    </template>
+                                    <template #title>
+                                        <span>{{ item.productName }}</span>
+                                    </template>
+                                    <template #description>
+                                        <span>{{ item.skuName }} / x{{ item.quantity }} / {{ item.orderNo }} / {{ item.finishTime }}</span>
+                                    </template>
+                                </a-list-item-meta>
+                                <strong>CNY {{ item.totalAmount }}</strong>
+                            </a-list-item>
+                        </template>
+                    </a-list>
+                </a-card>
+
+                <a-card class="soft-card notes-card" :bordered="false">
+                    <template #title>
+                        <span class="card-title">operating notes</span>
+                    </template>
+
+                    <p class="results-copy">
+                        Gift sets, runners, and display blocks are the strongest early performers. The pattern suggests gifting and display-led merchandising should remain a core direction.
+                    </p>
+
+                    <div class="note-block">
+                        <GiftOutlined />
+                        <div>
+                            <span>High-potential lane</span>
+                            <strong>Ceramic gifts / scent bundles</strong>
+                        </div>
+                    </div>
+                    <div class="note-block">
+                        <ShopOutlined />
+                        <div>
+                            <span>Customer preference</span>
+                            <strong>Small batch, customizable, display friendly</strong>
+                        </div>
+                    </div>
+                    <div class="note-block">
+                        <ArrowRightOutlined />
+                        <div>
+                            <span>Next backend step</span>
+                            <strong>Swap real orders, products, and artisan data module by module</strong>
+                        </div>
+                    </div>
+                </a-card>
             </div>
-            <div class="actions">
-                <a class="btn btn-cream" href="#filters">start your adoption plan</a>
-                <a class="btn btn-ghost-light" href="#partners">join as a shelter partner</a>
-            </div>
+        </section>
+
+        <section class="shell section" id="cta">
+            <a-card class="cta-card" :bordered="false">
+                <div class="cta-grid">
+                    <div>
+                        <p class="eyebrow">join the creative network</p>
+                        <h2>Build the store image and operating frame first, then connect real backend capabilities.</h2>
+                        <p class="intro cta-copy">
+                            The next round can wire user, home, product, and order endpoints into this same visual shell without a structural redesign.
+                        </p>
+                    </div>
+
+                    <a-space size="middle" wrap>
+                        <RouterLink to="/register">
+                            <a-button class="manual-ant-btn manual-ant-btn-cream" size="large">Register store</a-button>
+                        </RouterLink>
+                        <RouterLink to="/login">
+                            <a-button class="manual-ant-btn manual-ant-btn-light" size="large">Login to system</a-button>
+                        </RouterLink>
+                    </a-space>
+                </div>
+            </a-card>
         </section>
     </main>
 </template>
 
 <style scoped>
-.page { padding: 24px 24px 72px; overflow: hidden; }
-.shell, .cta { width: min(1180px, 100%); margin: 0 auto; }
-.section { padding: 36px 0 72px; }
-.hero { padding: 24px 0 88px; }
-.panel, .stats div { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
-.avatar, .monogram { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); color: var(--text-strong); }
-h1, h2, h3 { color: var(--text-strong); }
-.label, .status { color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.78rem; }
-.actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--coral-deep); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.eyebrow::before { content: ''; width: 34px; height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--coral)); }
-.hero-grid, .two-col, .cta { display: grid; gap: 24px; }
-.hero-grid { grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr); align-items: center; padding-top: 52px; }
-.hero-card { position: relative; min-height: 520px; display: flex; align-items: center; justify-content: center; }
-.glow { position: absolute; border-radius: 999px; filter: blur(4px); }
-.glow-coral { inset: 24px auto auto 18px; width: 180px; height: 180px; background: rgba(244, 155, 122, 0.34); }
-.glow-gold { right: 8px; bottom: 52px; width: 220px; height: 220px; background: rgba(255, 195, 109, 0.28); }
-.match-card { position: relative; z-index: 1; width: min(100%, 480px); padding: 28px; border-radius: 36px; background: linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(255, 243, 235, 0.94)); border: 1px solid rgba(223, 157, 121, 0.22); box-shadow: 0 32px 70px rgba(160, 103, 77, 0.22); }
-.lead, .intro, .results-copy, .story p, .cta p, .pet p { color: var(--text); font-size: 1.05rem; }
-h1, h2 { font-family: var(--font-display); line-height: 0.96; }
-h1 { max-width: 12ch; font-size: clamp(3.4rem, 6vw, 6.1rem); margin: 18px 0 20px; }
-h2 { font-size: clamp(2.4rem, 4vw, 4.3rem); margin: 14px 0 12px; }
-h3 { margin: 0; font-size: 1.45rem; }
-.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 24px; border: 1px solid transparent; border-radius: 999px; font-weight: 800; transition: transform 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease, border-color 0.24s ease; }
-.btn:hover, .btn:focus-visible, .filter:hover, .filter:focus-visible, .pet:hover, .story:hover, .partner:hover { transform: translateY(-2px); }
-.btn-primary { background: linear-gradient(135deg, var(--coral), #ef8a5f); color: #fff7f1; box-shadow: 0 16px 34px rgba(228, 123, 93, 0.26); }
-.btn-soft { background: rgba(255, 255, 255, 0.7); border-color: rgba(211, 138, 105, 0.26); color: var(--text-strong); }
-.btn-ghost { background: transparent; border-color: var(--line-strong); color: var(--text-strong); }
-.btn-cream { background: #fff8f1; color: var(--coral-deep); }
-.btn-ghost-light { background: transparent; border-color: rgba(255, 246, 236, 0.28); color: #fffaf4; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 34px; }
-.stats div { padding: 18px 20px; border-radius: 26px; }
-.stats dt { font-family: var(--font-display); font-size: 2rem; color: var(--text-strong); }
-.stats dd { margin-top: 8px; color: var(--text-muted); }
-.chips, .mini-list, .pet-grid, .filter-list, .selector-list, .result-list, .partner-grid { display: grid; gap: 14px; }
-.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-.chips span, .tags li, .focus, .selector-list div, .result, .pill, .filter { border-radius: 18px; }
-.chips span, .tags li, .result, .selector-list div { background: var(--surface-soft); }
-.chips span, .tags li { padding: 10px 14px; font-weight: 700; }
-.mini-list { margin-top: 24px; }
-.mini { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 24px; background: rgba(255, 255, 255, 0.82); animation: drift 4.6s ease-in-out infinite; animation-delay: var(--delay); }
-.avatar { width: 58px; height: 58px; border-radius: 20px; font-size: 1.5rem; }
-.avatar.small { width: 52px; height: 52px; border-radius: 18px; font-size: 1.35rem; }
-.apricot .avatar, .apricot .pet-visual { background: linear-gradient(145deg, #ffe1cf, #ffbc9d); }
-.mint .avatar, .mint .pet-visual { background: linear-gradient(145deg, #dff6e9, #abd8bd); }
-.gold .avatar, .gold .pet-visual { background: linear-gradient(145deg, #ffe7bb, #ffc773); }
-.pet-grid, .partner-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 28px; }
-.pet, .panel { padding: 24px; border-radius: 30px; }
-.pet { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); animation: rise 0.8s ease both; animation-delay: var(--card-delay); transition: transform 0.24s ease, box-shadow 0.24s ease; }
-.pet-visual { position: relative; min-height: 220px; padding: 22px; display: flex; align-items: end; justify-content: space-between; border-radius: 28px; overflow: hidden; }
-.pulse { position: absolute; top: 18px; right: 18px; width: 86px; height: 86px; border-radius: 999px; background: rgba(255, 255, 255, 0.34); animation: pulse 3.6s ease-in-out infinite; }
-.monogram { position: relative; z-index: 1; width: 88px; height: 88px; border-radius: 30px; background: rgba(255, 251, 245, 0.72); backdrop-filter: blur(12px); font-size: 2.4rem; }
-.status { position: relative; z-index: 1; max-width: 12ch; padding: 12px 14px; background: rgba(255, 255, 255, 0.74); color: var(--text); font-weight: 800; }
-.pet-head, .row-head, .result-title, .pet-foot { display: flex; justify-content: space-between; gap: 16px; }
-.pet-head { align-items: start; margin-top: 18px; }
-.pet-head p, .result p, .row-head p { color: var(--text-muted); }
-.pet-head strong { padding: 10px 12px; border-radius: 16px; background: rgba(250, 240, 229, 0.9); color: var(--text); white-space: nowrap; }
-.tags { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; }
-.tags.stacked { align-content: start; }
-.pet-foot { align-items: center; }
-.pet-foot a { color: var(--coral-deep); font-weight: 800; }
-.two-col { grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr); align-items: start; }
-.row-head { align-items: start; }
-.filter-list { margin-top: 22px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.filter { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border: 1px solid transparent; background: #fff7f0; color: var(--text); cursor: pointer; transition: transform 0.2s ease, border-color 0.2s ease; }
-.filter.active { background: rgba(235, 139, 105, 0.14); border-color: rgba(229, 132, 96, 0.3); }
-.selector-list { margin-top: 22px; }
-.selector-list div { padding: 18px 20px; }
-.selector-list span { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 0.92rem; }
-.result-list { margin-top: 18px; }
-.result { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; padding: 14px 16px; }
-.pill { padding: 10px 14px; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.03em; }
-.coral-pill { background: rgba(232, 122, 86, 0.12); color: var(--coral-deep); }
-.mint-pill { background: rgba(151, 193, 169, 0.2); color: #46745a; }
-.story, .partner, .highlight { transition: transform 0.24s ease, box-shadow 0.24s ease; }
-.story blockquote { color: var(--text-strong); font-size: 1.15rem; font-weight: 700; line-height: 1.6; margin: 16px 0 0; }
-.highlight { background: linear-gradient(180deg, rgba(255, 248, 239, 0.95), rgba(255, 237, 217, 0.95)); }
-.focus { max-width: 18ch; padding: 10px 12px; background: rgba(255, 240, 226, 0.92); color: var(--text); font-weight: 700; text-align: right; }
-.cta { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 36px; border-radius: 34px; background: linear-gradient(135deg, #d16f51, #ed9766); color: #fffaf6; box-shadow: 0 30px 70px rgba(194, 104, 72, 0.24); }
-.cta .eyebrow, .cta p, .cta h2 { color: inherit; }
-.cta .eyebrow::before { background: linear-gradient(90deg, rgba(255, 242, 225, 0.95), rgba(255, 208, 160, 0.88)); }
-@keyframes drift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-@keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.72; } 50% { transform: scale(1.12); opacity: 0.35; } }
-@media (max-width: 1120px) {
-    .hero-grid, .two-col, .cta, .pet-grid, .partner-grid { grid-template-columns: 1fr; }
-    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.page {
+    padding: 24px 24px 72px;
+    overflow: hidden;
 }
+
+.shell {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+}
+
+.section {
+    padding: 36px 0 72px;
+}
+
+.hero {
+    padding: 24px 0 88px;
+}
+
+.hero-grid,
+.two-col,
+.cta-grid {
+    display: grid;
+    gap: 24px;
+}
+
+.hero-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+    align-items: start;
+    padding-top: 52px;
+}
+
+.hero-copy {
+    display: grid;
+    gap: 24px;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--coral-deep);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.eyebrow::before {
+    content: '';
+    width: 34px;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--gold), var(--coral));
+}
+
+h1,
+h2,
+h3 {
+    margin: 0;
+    color: var(--text-strong);
+    font-family: var(--font-display);
+}
+
+h1 {
+    max-width: 12ch;
+    font-size: clamp(3.3rem, 6vw, 5.8rem);
+    line-height: 0.96;
+}
+
+h2 {
+    font-size: clamp(2.2rem, 4vw, 4rem);
+    line-height: 0.98;
+    margin: 14px 0 12px;
+}
+
+h3 {
+    font-size: 1.35rem;
+}
+
+.lead,
+.intro,
+.results-copy {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.05rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.soft-card {
+    border-radius: 28px;
+    background: rgba(255, 253, 248, 0.92);
+    box-shadow: var(--shadow);
+}
+
+.stat-card :deep(.ant-card-body) {
+    display: grid;
+    gap: 12px;
+}
+
+.stat-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.stat-card p {
+    margin: 0;
+    color: var(--text);
+}
+
+.hero-panel :deep(.ant-card-cover img),
+.image-card :deep(.ant-card-cover img) {
+    height: 240px;
+    object-fit: cover;
+}
+
+.hero-panel :deep(.ant-card-body) {
+    padding: 24px;
+}
+
+.card-title {
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.hero-panel-copy {
+    margin: 0 0 18px;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.signal-list {
+    display: grid;
+    gap: 12px;
+}
+
+.signal-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 247, 238, 0.9);
+}
+
+.signal-body {
+    display: grid;
+}
+
+.signal-body strong {
+    color: var(--text-strong);
+}
+
+.signal-body small {
+    color: var(--text-muted);
+}
+
+.info-tag {
+    padding: 8px 12px;
+    border-radius: 999px;
+}
+
+.image-card :deep(.ant-card-body) {
+    display: grid;
+    gap: 14px;
+}
+
+.product-top,
+.artisan-head,
+.product-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.product-foot {
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.product-foot strong {
+    color: var(--coral-deep);
+}
+
+.artisan-head {
+    align-items: center;
+}
+
+.artisan-head p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+}
+
+.two-col {
+    grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+    align-items: start;
+}
+
+.notes-card :deep(.ant-card-body) {
+    display: grid;
+    gap: 16px;
+}
+
+.note-block {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 16px 18px;
+    border-radius: 20px;
+    background: rgba(255, 247, 238, 0.92);
+    color: var(--text-strong);
+}
+
+.note-block span {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+}
+
+.cta-card {
+    border-radius: 34px;
+    background: linear-gradient(135deg, #d16f51, #ed9766);
+    box-shadow: 0 30px 70px rgba(194, 104, 72, 0.24);
+}
+
+.cta-card :deep(.ant-card-body) {
+    padding: 36px;
+}
+
+.cta-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.cta-card .eyebrow,
+.cta-card h2,
+.cta-copy {
+    color: #fffaf6;
+}
+
+.cta-card .eyebrow::before {
+    background: linear-gradient(90deg, rgba(255, 242, 225, 0.95), rgba(255, 208, 160, 0.88));
+}
+
+@media (max-width: 1120px) {
+    .hero-grid,
+    .two-col,
+    .cta-grid,
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 760px) {
-    .page { padding: 16px 16px 56px; }
-    .hero { padding-top: 8px; padding-bottom: 64px; }
-    .hero-grid { gap: 32px; padding-top: 34px; }
-    h1 { max-width: none; }
-    .stats, .pet-grid, .partner-grid, .filter-list { grid-template-columns: 1fr; }
-    .pet-head, .row-head, .result-title, .pet-foot, .actions { flex-direction: column; align-items: flex-start; }
-    .result { grid-template-columns: 1fr; }
-    .focus { text-align: left; }
-    .btn { width: 100%; }
-    .cta { padding: 28px 22px; }
+    .page {
+        padding: 16px 16px 56px;
+    }
+
+    .hero {
+        padding-top: 8px;
+        padding-bottom: 64px;
+    }
+
+    .hero-grid {
+        gap: 32px;
+        padding-top: 34px;
+    }
+
+    h1 {
+        max-width: none;
+    }
+
+    .product-top,
+    .artisan-head,
+    .product-foot {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .signal-item {
+        grid-template-columns: 1fr;
+    }
+
+    .cta-card :deep(.ant-card-body) {
+        padding: 28px 22px;
+    }
+
+    :deep(.manual-ant-btn.ant-btn) {
+        width: 100%;
+    }
 }
 </style>
-
-

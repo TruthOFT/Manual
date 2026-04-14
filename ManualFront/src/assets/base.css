@@ -94,6 +94,114 @@ svg {
     outline-offset: 3px;
 }
 
+.manual-ant-btn.ant-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 24px;
+    border-radius: 999px;
+    font-weight: 800;
+    border-width: 1px;
+    line-height: 1;
+    transition:
+        transform 0.24s ease,
+        box-shadow 0.24s ease,
+        background-color 0.24s ease,
+        border-color 0.24s ease,
+        color 0.24s ease;
+}
+
+.manual-ant-btn.ant-btn > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.manual-ant-btn.ant-btn:hover,
+.manual-ant-btn.ant-btn:focus-visible {
+    transform: translateY(-2px);
+}
+
+.manual-ant-btn-primary.ant-btn,
+.manual-ant-btn-primary.ant-btn.ant-btn-default,
+.manual-ant-btn-primary.ant-btn.ant-btn-primary {
+    background: linear-gradient(135deg, var(--coral), #ef8a5f);
+    border-color: transparent;
+    color: #fff7f1;
+    box-shadow: 0 16px 34px rgba(228, 123, 93, 0.26);
+}
+
+.manual-ant-btn-primary.ant-btn:hover,
+.manual-ant-btn-primary.ant-btn:focus-visible,
+.manual-ant-btn-primary.ant-btn.ant-btn-default:hover,
+.manual-ant-btn-primary.ant-btn.ant-btn-primary:hover {
+    background: linear-gradient(135deg, #de7454, #ea865b);
+    border-color: transparent;
+    color: #fffaf4;
+}
+
+.manual-ant-btn-soft.ant-btn,
+.manual-ant-btn-soft.ant-btn.ant-btn-default {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(211, 138, 105, 0.26);
+    color: var(--text-strong);
+    box-shadow: none;
+}
+
+.manual-ant-btn-soft.ant-btn:hover,
+.manual-ant-btn-soft.ant-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(211, 138, 105, 0.34);
+    color: var(--text-strong);
+}
+
+.manual-ant-btn-ghost.ant-btn,
+.manual-ant-btn-ghost.ant-btn.ant-btn-default {
+    background: transparent;
+    border-color: var(--line-strong);
+    color: var(--text-strong);
+    box-shadow: none;
+}
+
+.manual-ant-btn-ghost.ant-btn:hover,
+.manual-ant-btn-ghost.ant-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.42);
+    border-color: rgba(135, 95, 69, 0.42);
+    color: var(--text-strong);
+}
+
+.manual-ant-btn-cream.ant-btn,
+.manual-ant-btn-cream.ant-btn.ant-btn-default {
+    background: #fff8f1;
+    border-color: transparent;
+    color: var(--coral-deep);
+    box-shadow: none;
+}
+
+.manual-ant-btn-cream.ant-btn:hover,
+.manual-ant-btn-cream.ant-btn:focus-visible {
+    background: #fff1e5;
+    border-color: transparent;
+    color: var(--coral-deep);
+}
+
+.manual-ant-btn-light.ant-btn,
+.manual-ant-btn-light.ant-btn.ant-btn-default {
+    background: transparent;
+    border-color: rgba(255, 246, 236, 0.28);
+    color: #fffaf4;
+    box-shadow: none;
+}
+
+.manual-ant-btn-light.ant-btn:hover,
+.manual-ant-btn-light.ant-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 246, 236, 0.48);
+    color: #fffaf4;
+}
+
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;

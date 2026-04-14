@@ -1,7 +1,7 @@
 export type LoginUser = {
     id: number
+    username: string
     userAccount: string
-    userName: string
     avatarUrl: string
     userRole: string
 }
@@ -9,11 +9,11 @@ export type LoginUser = {
 export type UserLoginRequest = {
     userAccount: string
     userPassword: string
+    rememberMe?: boolean
 }
 
 export type UserRegisterRequest = {
     userAccount: string
-    userName: string
     userPassword: string
     checkPassword: string
 }

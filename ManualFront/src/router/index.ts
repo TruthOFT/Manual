@@ -1,10 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import ProfileLayout from '@/components/layout/ProfileLayout.vue'
+import ArtisansView from '@/views/ArtisansView.vue'
+import CustomView from '@/views/CustomView.vue'
 import { pinia } from '@/stores'
 import { useUserStore } from '@/stores/user'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
+import ProductsView from '@/views/ProductsView.vue'
 import RegisterView from '@/views/RegisterView.vue'
+import ProfileAddressesView from '@/views/profile/ProfileAddressesView.vue'
+import ProfileFavoritesView from '@/views/profile/ProfileFavoritesView.vue'
+import ProfileHomeView from '@/views/profile/ProfileHomeView.vue'
+import ProfileOrdersView from '@/views/profile/ProfileOrdersView.vue'
+import ProfileSettingsView from '@/views/profile/ProfileSettingsView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,6 +22,30 @@ const router = createRouter({
             path: '/',
             name: 'home',
             component: HomeView,
+            meta: {
+                public: true,
+            },
+        },
+        {
+            path: '/products',
+            name: 'products',
+            component: ProductsView,
+            meta: {
+                public: true,
+            },
+        },
+        {
+            path: '/artisans',
+            name: 'artisans',
+            component: ArtisansView,
+            meta: {
+                public: true,
+            },
+        },
+        {
+            path: '/custom',
+            name: 'custom',
+            component: CustomView,
             meta: {
                 public: true,
             },
@@ -36,12 +69,38 @@ const router = createRouter({
             },
         },
         {
-            path: '/about',
-            name: 'about',
-            component: () => import('@/views/AboutView.vue'),
+            path: '/profile',
+            component: ProfileLayout,
             meta: {
-                public: true,
+                requiresAuth: true,
             },
+            children: [
+                {
+                    path: '',
+                    name: 'profile',
+                    component: ProfileHomeView,
+                },
+                {
+                    path: 'orders',
+                    name: 'profile-orders',
+                    component: ProfileOrdersView,
+                },
+                {
+                    path: 'favorites',
+                    name: 'profile-favorites',
+                    component: ProfileFavoritesView,
+                },
+                {
+                    path: 'addresses',
+                    name: 'profile-addresses',
+                    component: ProfileAddressesView,
+                },
+                {
+                    path: 'settings',
+                    name: 'profile-settings',
+                    component: ProfileSettingsView,
+                },
+            ],
         },
     ],
 })
@@ -55,7 +114,16 @@ router.beforeEach(async (to) => {
 
     if (to.meta.guestOnly && userStore.isLoggedIn) {
         return {
-            path: '/',
+            path: '/profile',
+        }
+    }
+
+    if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+        return {
+            path: '/login',
+            query: {
+                redirect: to.fullPath,
+            },
         }
     }
 

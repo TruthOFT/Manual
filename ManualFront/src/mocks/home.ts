@@ -35,7 +35,7 @@ export const homePageMock: HomePageData = {
             categoryLevel: 1,
         },
     ],
-    featuredProducts: [
+    products: [
         {
             id: 101,
             productName: 'Sunset Tea Cup Set',

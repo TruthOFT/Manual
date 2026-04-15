@@ -50,7 +50,7 @@ export type RecentOrderItem = {
 
 export type HomePageData = {
     categories: CategoryItem[]
-    featuredProducts: ProductCard[]
+    products: ProductCard[]
     artisans: ArtisanItem[]
     recentOrders: RecentOrderItem[]
 }

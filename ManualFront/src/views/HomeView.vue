@@ -1,86 +1,62 @@
 <script setup lang="ts">
-import {
-    ArrowRightOutlined,
-    FireOutlined,
-    GiftOutlined,
-    ShoppingOutlined,
-    ShopOutlined,
-    TeamOutlined,
-} from '@ant-design/icons-vue'
+import { ArrowRightOutlined, GiftOutlined, ShopOutlined } from '@ant-design/icons-vue'
+import { computed } from 'vue'
 
 import LandingNav from '@/components/layout/LandingNav.vue'
-import { homePageMock } from '@/mocks/home'
+import { useHomePage } from '@/composables/useHomePage'
 
-const homeData = homePageMock
-
-const dashboardStats = [
-    {
-        label: 'Today revenue',
-        value: 1224,
-        prefix: 'CNY',
-        icon: FireOutlined,
-        note: 'Gift sets and runners continue to convert.',
-    },
-    {
-        label: 'Live products',
-        value: 62,
-        icon: ShoppingOutlined,
-        note: 'Small-batch drops keep the page feeling fresh.',
-    },
-    {
-        label: 'Maker partners',
-        value: 18,
-        icon: TeamOutlined,
-        note: 'Ceramic, wood, textile, and scent studios included.',
-    },
-]
+const { errorMessage, homeData, loadHomePage, loading } = useHomePage()
 
 const operatingHighlights = [
-    'Custom gift boxes and brand bundles are already part of the story.',
-    'The layout is prepared for later backend data replacement.',
-    'Public storefront storytelling and operating signals share one visual system.',
+    '首页、作品页、匠人页现在共用同一份真实接口数据，公开展示内容已经统一打通。',
+    '精选作品、匠人信息和最近订单动态都直接来自 manual_mall 数据库。',
+    '后续继续扩展详情页、购物车和下单链路时，可以沿用这套公开展示接口。',
 ]
+
+const categories = computed(() => homeData.value?.categories ?? [])
+const featuredProducts = computed(() => homeData.value?.products.slice(0, 3) ?? [])
+const signalProducts = computed(() => featuredProducts.value.slice(0, 2))
+const recentOrders = computed(() => homeData.value?.recentOrders ?? [])
 
 function getPriceRange(minPrice: number, maxPrice: number) {
     return minPrice === maxPrice ? `CNY ${minPrice}` : `CNY ${minPrice} - ${maxPrice}`
 }
 
 function getSupportLabel(supportCustom: number) {
-    return supportCustom ? 'Custom ready' : 'Retail stock'
+    return supportCustom ? '支持定制' : '现货零售'
 }
 </script>
 
 <template>
     <main class="page">
-        <section class="hero shell" id="top">
+        <section class="hero shell">
             <LandingNav />
 
             <div class="hero-grid">
                 <div class="hero-copy">
-                    <p class="eyebrow">creative retail, artisan stories, warm operations</p>
-                    <h1>Shape the handmade creative shop into a storefront that feels premium and operational at first glance.</h1>
+                    <p class="eyebrow">手作品牌展示、精选作品、匠人故事</p>
+                    <h1>把手工门店做成既有品牌温度，也方便用户浏览与下单的前台站点。</h1>
                     <p class="lead">
-                        This first home page uses mock data to carry the brand story, featured work, artisan partners, and order movement. Later backend work can swap the data source without changing the structure.
+                        首页现在只保留适合公开展示的导购内容，真实数据已经接入，但不再暴露经营统计这类后台管理信息。
                     </p>
 
                     <a-space size="middle" wrap>
-                        <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" href="#products">View featured work</a-button>
-                        <a-button class="manual-ant-btn manual-ant-btn-soft" size="large" href="#cta">Apply to join</a-button>
+                        <RouterLink to="/products">
+                            <a-button class="manual-ant-btn manual-ant-btn-primary" size="large">查看精选作品</a-button>
+                        </RouterLink>
+                        <RouterLink to="/custom">
+                            <a-button class="manual-ant-btn manual-ant-btn-soft" size="large">了解定制服务</a-button>
+                        </RouterLink>
                     </a-space>
 
-                    <div class="stats-grid">
-                        <a-card v-for="item in dashboardStats" :key="item.label" class="soft-card stat-card" :bordered="false">
-                            <div class="stat-head">
-                                <component :is="item.icon" />
-                                <span>{{ item.label }}</span>
-                            </div>
-                            <a-statistic :value="item.value" :prefix="item.prefix" />
-                            <p>{{ item.note }}</p>
-                        </a-card>
-                    </div>
+                    <a-alert v-if="errorMessage" type="error" show-icon :message="errorMessage">
+                        <template #action>
+                            <a-button type="link" @click="loadHomePage(true)">重新加载</a-button>
+                        </template>
+                    </a-alert>
                 </div>
 
-                <a-card class="hero-panel" :bordered="false">
+                <a-card class="hero-panel soft-card" :bordered="false">
                     <template #cover>
                         <a-image
                             :preview="false"
@@ -90,21 +66,26 @@ function getSupportLabel(supportCustom: number) {
                     </template>
 
                     <template #title>
-                        <span class="card-title">today's store pulse</span>
+                        <span class="card-title">今日门店精选</span>
                     </template>
 
-                    <p class="hero-panel-copy">One page now carries both brand atmosphere and store signals.</p>
+                    <p class="hero-panel-copy">用户进入首页就能快速感知作品风格、匠人来源和门店气质。</p>
 
-                    <div class="signal-list">
-                        <div v-for="product in homeData.featuredProducts.slice(0, 2)" :key="product.id" class="signal-item">
-                            <a-avatar shape="square" :size="56" :src="product.productCover" />
-                            <div class="signal-body">
-                                <strong>{{ product.productName }}</strong>
-                                <small>{{ product.shopName }} / {{ product.craftType }}</small>
+                    <a-skeleton v-if="loading" active :paragraph="{ rows: 4 }" />
+
+                    <template v-else>
+                        <div v-if="signalProducts.length" class="signal-list">
+                            <div v-for="product in signalProducts" :key="product.id" class="signal-item">
+                                <a-avatar shape="square" :size="56" :src="product.productCover" />
+                                <div class="signal-body">
+                                    <strong>{{ product.productName }}</strong>
+                                    <small>{{ product.shopName }} / {{ product.craftType }}</small>
+                                </div>
+                                <span>{{ getPriceRange(product.minPrice, product.maxPrice) }}</span>
                             </div>
-                            <span>{{ getPriceRange(product.minPrice, product.maxPrice) }}</span>
                         </div>
-                    </div>
+                        <a-empty v-else description="暂无精选作品" />
+                    </template>
 
                     <a-divider />
 
@@ -115,13 +96,14 @@ function getSupportLabel(supportCustom: number) {
             </div>
         </section>
 
-        <section class="shell section" id="categories">
-            <p class="eyebrow">craft categories</p>
-            <h2>Start with clear categories so the store mood, product direction, and browsing flow feel intentional.</h2>
-            <p class="intro">Each category card maps to the existing data shape, while the visual system stays aligned with the premium warm look you already prefer.</p>
+        <section class="shell section">
+            <p class="eyebrow">精选分类</p>
+            <h2>先用清晰的分类建立浏览节奏，再把真实商品数据接进来。</h2>
 
-            <a-row :gutter="[20, 20]">
-                <a-col v-for="category in homeData.categories" :key="category.id" :xs="24" :sm="12" :xl="6">
+            <a-skeleton v-if="loading" active :paragraph="{ rows: 6 }" />
+
+            <a-row v-else-if="categories.length" :gutter="[20, 20]">
+                <a-col v-for="category in categories" :key="category.id" :xs="24" :sm="12" :xl="6">
                     <a-card class="soft-card image-card" hoverable :bordered="false">
                         <template #cover>
                             <a-image :preview="false" :src="category.categoryIcon" :alt="category.categoryName" />
@@ -132,15 +114,24 @@ function getSupportLabel(supportCustom: number) {
                     </a-card>
                 </a-col>
             </a-row>
+            <a-empty v-else description="暂无分类数据" />
         </section>
 
-        <section class="shell section" id="products">
-            <p class="eyebrow">featured handmade products</p>
-            <h2>Let the featured cards explain the store taste now, then receive real inventory and pricing later.</h2>
-            <p class="intro">The product cards already consume the current `featuredProducts` structure, so the later backend hookup can stay focused on data replacement only.</p>
+        <section class="shell section">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">作品预览</p>
+                    <h2>首页只展示最值得先被看见的几件作品。</h2>
+                </div>
+                <RouterLink to="/products">
+                    <a-button class="manual-ant-btn manual-ant-btn-ghost" size="large">进入作品页</a-button>
+                </RouterLink>
+            </div>
 
-            <a-row :gutter="[22, 22]">
-                <a-col v-for="product in homeData.featuredProducts" :key="product.id" :xs="24" :lg="8">
+            <a-skeleton v-if="loading" active :paragraph="{ rows: 8 }" />
+
+            <a-row v-else-if="featuredProducts.length" :gutter="[22, 22]">
+                <a-col v-for="product in featuredProducts" :key="product.id" :xs="24" :lg="8">
                     <a-card class="soft-card image-card product-card" hoverable :bordered="false">
                         <template #cover>
                             <a-image :preview="false" :src="product.productCover" :alt="product.productName" />
@@ -148,145 +139,74 @@ function getSupportLabel(supportCustom: number) {
 
                         <div class="product-top">
                             <a-tag color="orange">{{ product.categoryName }}</a-tag>
-                            <a-tag color="green">{{ getSupportLabel(product.supportCustom) }}</a-tag>
+                            <a-tag :color="product.supportCustom ? 'green' : 'default'">
+                                {{ getSupportLabel(product.supportCustom) }}
+                            </a-tag>
                         </div>
 
                         <h3>{{ product.productName }}</h3>
                         <p>{{ product.productSubtitle }}</p>
 
-                        <a-space wrap>
-                            <a-tag>{{ product.craftType }}</a-tag>
-                            <a-tag>{{ product.originPlace }}</a-tag>
-                            <a-tag>{{ product.handmadeCycleDays }} day cycle</a-tag>
-                        </a-space>
-
                         <div class="product-foot">
-                            <span>{{ product.artisanName }} / sold {{ product.soldQuantity }}</span>
+                            <span>{{ product.artisanName }} / {{ product.shopName }}</span>
                             <strong>{{ getPriceRange(product.minPrice, product.maxPrice) }}</strong>
                         </div>
                     </a-card>
                 </a-col>
             </a-row>
+            <a-empty v-else description="暂无作品数据" />
         </section>
 
-        <section class="shell section" id="artisans">
-            <p class="eyebrow">artisan partners</p>
-            <h2>Turn maker stories and studio relationships into part of the storefront value.</h2>
-            <p class="intro">This section is mock-backed now, but the visual grouping is already suitable for real artisan data once the backend is ready.</p>
+        <section class="shell section two-col">
+            <a-card class="soft-card" :bordered="false">
+                <template #title>
+                    <span class="card-title">最近订单动态</span>
+                </template>
 
-            <a-row :gutter="[22, 22]">
-                <a-col v-for="artisan in homeData.artisans" :key="artisan.id" :xs="24" :lg="8">
-                    <a-card class="soft-card image-card artisan-card" hoverable :bordered="false">
-                        <template #cover>
-                            <a-image :preview="false" :src="artisan.coverUrl" :alt="artisan.artisanName" />
-                        </template>
+                <a-skeleton v-if="loading" active :paragraph="{ rows: 5 }" />
 
-                        <div class="artisan-head">
-                            <a-avatar :size="58" :src="artisan.artisanAvatar" />
-                            <div>
-                                <h3>{{ artisan.artisanName }}</h3>
-                                <p>{{ artisan.shopName }} / {{ artisan.originPlace }}</p>
-                            </div>
-                        </div>
-
-                        <a-space wrap>
-                            <a-tag color="geekblue">{{ artisan.craftCategory }}</a-tag>
-                            <a-tag>{{ artisan.experienceYears }} years</a-tag>
-                            <a-tag>{{ artisan.productCount }} products</a-tag>
-                            <a-tag :color="artisan.supportCustom ? 'green' : 'default'">{{ getSupportLabel(artisan.supportCustom) }}</a-tag>
-                        </a-space>
-                    </a-card>
-                </a-col>
-            </a-row>
-        </section>
-
-        <section class="shell section" id="orders">
-            <p class="eyebrow">recent orders</p>
-            <h2>Order activity should feel like part of the story, not just raw numbers.</h2>
-            <p class="intro">This operating block is driven by mock order data for now and is ready to be replaced with real order flow later.</p>
-
-            <div class="two-col">
-                <a-card class="soft-card" :bordered="false">
-                    <template #title>
-                        <span class="card-title">recent order rhythm</span>
+                <a-list v-else-if="recentOrders.length" :data-source="recentOrders" item-layout="horizontal">
+                    <template #renderItem="{ item }">
+                        <a-list-item>
+                            <a-list-item-meta>
+                                <template #avatar>
+                                    <a-avatar shape="square" :size="60" :src="item.productCover" />
+                                </template>
+                                <template #title>{{ item.productName }}</template>
+                                <template #description>{{ item.skuName }} / x{{ item.quantity }} / {{ item.finishTime }}</template>
+                            </a-list-item-meta>
+                            <strong>CNY {{ item.totalAmount }}</strong>
+                        </a-list-item>
                     </template>
-                    <template #extra>
-                        <a-tag color="orange">mock data</a-tag>
-                    </template>
+                </a-list>
+                <a-empty v-else description="暂无订单动态" />
+            </a-card>
 
-                    <a-list :data-source="homeData.recentOrders" item-layout="horizontal">
-                        <template #renderItem="{ item }">
-                            <a-list-item>
-                                <a-list-item-meta>
-                                    <template #avatar>
-                                        <a-avatar shape="square" :size="60" :src="item.productCover" />
-                                    </template>
-                                    <template #title>
-                                        <span>{{ item.productName }}</span>
-                                    </template>
-                                    <template #description>
-                                        <span>{{ item.skuName }} / x{{ item.quantity }} / {{ item.orderNo }} / {{ item.finishTime }}</span>
-                                    </template>
-                                </a-list-item-meta>
-                                <strong>CNY {{ item.totalAmount }}</strong>
-                            </a-list-item>
-                        </template>
-                    </a-list>
-                </a-card>
+            <a-card class="soft-card notes-card" :bordered="false">
+                <template #title>
+                    <span class="card-title">前台导航方向</span>
+                </template>
 
-                <a-card class="soft-card notes-card" :bordered="false">
-                    <template #title>
-                        <span class="card-title">operating notes</span>
-                    </template>
-
-                    <p class="results-copy">
-                        Gift sets, runners, and display blocks are the strongest early performers. The pattern suggests gifting and display-led merchandising should remain a core direction.
-                    </p>
-
-                    <div class="note-block">
-                        <GiftOutlined />
-                        <div>
-                            <span>High-potential lane</span>
-                            <strong>Ceramic gifts / scent bundles</strong>
-                        </div>
-                    </div>
-                    <div class="note-block">
-                        <ShopOutlined />
-                        <div>
-                            <span>Customer preference</span>
-                            <strong>Small batch, customizable, display friendly</strong>
-                        </div>
-                    </div>
-                    <div class="note-block">
-                        <ArrowRightOutlined />
-                        <div>
-                            <span>Next backend step</span>
-                            <strong>Swap real orders, products, and artisan data module by module</strong>
-                        </div>
-                    </div>
-                </a-card>
-            </div>
-        </section>
-
-        <section class="shell section" id="cta">
-            <a-card class="cta-card" :bordered="false">
-                <div class="cta-grid">
+                <div class="note-block">
+                    <GiftOutlined />
                     <div>
-                        <p class="eyebrow">join the creative network</p>
-                        <h2>Build the store image and operating frame first, then connect real backend capabilities.</h2>
-                        <p class="intro cta-copy">
-                            The next round can wire user, home, product, and order endpoints into this same visual shell without a structural redesign.
-                        </p>
+                        <span>用户关注点</span>
+                        <strong>浏览作品、查看匠人、咨询定制、进入个人中心。</strong>
                     </div>
-
-                    <a-space size="middle" wrap>
-                        <RouterLink to="/register">
-                            <a-button class="manual-ant-btn manual-ant-btn-cream" size="large">Register store</a-button>
-                        </RouterLink>
-                        <RouterLink to="/login">
-                            <a-button class="manual-ant-btn manual-ant-btn-light" size="large">Login to system</a-button>
-                        </RouterLink>
-                    </a-space>
+                </div>
+                <div class="note-block">
+                    <ShopOutlined />
+                    <div>
+                        <span>个人中心</span>
+                        <strong>承接我的订单、收藏、地址和账号设置，形成完整用户侧链路。</strong>
+                    </div>
+                </div>
+                <div class="note-block">
+                    <ArrowRightOutlined />
+                    <div>
+                        <span>后续扩展</span>
+                        <strong>后面继续补详情页、购物车和下单流程时，可以沿用当前公开数据结构。</strong>
+                    </div>
                 </div>
             </a-card>
         </section>
@@ -313,8 +233,7 @@ function getSupportLabel(supportCustom: number) {
 }
 
 .hero-grid,
-.two-col,
-.cta-grid {
+.two-col {
     display: grid;
     gap: 24px;
 }
@@ -358,12 +277,12 @@ h3 {
 
 h1 {
     max-width: 12ch;
-    font-size: clamp(3.3rem, 6vw, 5.8rem);
+    font-size: clamp(3.2rem, 6vw, 5.4rem);
     line-height: 0.96;
 }
 
 h2 {
-    font-size: clamp(2.2rem, 4vw, 4rem);
+    font-size: clamp(2.1rem, 4vw, 3.8rem);
     line-height: 0.98;
     margin: 14px 0 12px;
 }
@@ -373,41 +292,23 @@ h3 {
 }
 
 .lead,
-.intro,
-.results-copy {
-    margin: 0;
+.hero-panel-copy,
+.product-card p {
     color: var(--text);
-    font-size: 1.05rem;
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
+.section-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
 }
 
 .soft-card {
     border-radius: 28px;
     background: rgba(255, 253, 248, 0.92);
     box-shadow: var(--shadow);
-}
-
-.stat-card :deep(.ant-card-body) {
-    display: grid;
-    gap: 12px;
-}
-
-.stat-head {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-muted);
-    font-weight: 700;
-}
-
-.stat-card p {
-    margin: 0;
-    color: var(--text);
 }
 
 .hero-panel :deep(.ant-card-cover img),
@@ -426,12 +327,6 @@ h3 {
     text-transform: uppercase;
     font-size: 0.78rem;
     font-weight: 800;
-}
-
-.hero-panel-copy {
-    margin: 0 0 18px;
-    color: var(--text);
-    font-size: 1rem;
 }
 
 .signal-list {
@@ -472,7 +367,6 @@ h3 {
 }
 
 .product-top,
-.artisan-head,
 .product-foot {
     display: flex;
     justify-content: space-between;
@@ -486,15 +380,6 @@ h3 {
 
 .product-foot strong {
     color: var(--coral-deep);
-}
-
-.artisan-head {
-    align-items: center;
-}
-
-.artisan-head p {
-    margin: 4px 0 0;
-    color: var(--text-muted);
 }
 
 .two-col {
@@ -525,37 +410,15 @@ h3 {
     font-size: 0.92rem;
 }
 
-.cta-card {
-    border-radius: 34px;
-    background: linear-gradient(135deg, #d16f51, #ed9766);
-    box-shadow: 0 30px 70px rgba(194, 104, 72, 0.24);
-}
-
-.cta-card :deep(.ant-card-body) {
-    padding: 36px;
-}
-
-.cta-grid {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-}
-
-.cta-card .eyebrow,
-.cta-card h2,
-.cta-copy {
-    color: #fffaf6;
-}
-
-.cta-card .eyebrow::before {
-    background: linear-gradient(90deg, rgba(255, 242, 225, 0.95), rgba(255, 208, 160, 0.88));
-}
-
 @media (max-width: 1120px) {
     .hero-grid,
-    .two-col,
-    .cta-grid,
-    .stats-grid {
+    .two-col {
         grid-template-columns: 1fr;
+    }
+
+    .section-head {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
 
@@ -579,7 +442,6 @@ h3 {
     }
 
     .product-top,
-    .artisan-head,
     .product-foot {
         flex-direction: column;
         align-items: flex-start;
@@ -587,10 +449,6 @@ h3 {
 
     .signal-item {
         grid-template-columns: 1fr;
-    }
-
-    .cta-card :deep(.ant-card-body) {
-        padding: 28px 22px;
     }
 
     :deep(.manual-ant-btn.ant-btn) {

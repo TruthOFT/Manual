@@ -54,7 +54,7 @@ async function handleSubmit() {
             rememberMe: form.rememberMe,
         })
         userStore.setCurrentUser(loginUserInfo)
-        const redirect = typeof route.query.redirect === 'string' && route.query.redirect.length > 0 ? route.query.redirect : '/'
+        const redirect = typeof route.query.redirect === 'string' && route.query.redirect.length > 0 ? route.query.redirect : '/profile'
         await router.push(redirect)
     } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '登录失败，请稍后重试。'

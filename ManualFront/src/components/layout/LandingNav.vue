@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useUserStore } from '@/stores/user'
 
 const navItems = [
-    { label: '精选作品', href: '#products' },
-    { label: '匠人工作室', href: '#artisans' },
-    { label: '订单动态', href: '#orders' },
-    { label: '入驻合作', href: '#cta' },
+    { label: '首页', to: '/' },
+    { label: '精选作品', to: '/products' },
+    { label: '匠人故事', to: '/artisans' },
+    { label: '定制服务', to: '/custom' },
 ]
 
 const router = useRouter()
@@ -19,8 +18,12 @@ const userStore = useUserStore()
 const displayName = computed(() => userStore.currentUser?.username || userStore.currentUser?.userAccount || '门店用户')
 
 async function handleMenuClick({ key }: { key: string }) {
+    if (key === 'profile') {
+        await router.push('/profile')
+        return
+    }
     if (key === 'settings') {
-        message.info('用户设置页面稍后接入')
+        await router.push('/profile/settings')
         return
     }
     if (key === 'logout') {
@@ -36,14 +39,14 @@ async function handleMenuClick({ key }: { key: string }) {
             <span class="mark">hm</span>
             <span class="brand-copy">
                 <strong>手工创意门店</strong>
-                <small>门店管理系统</small>
+                <small>前台展示与个人中心</small>
             </span>
         </RouterLink>
 
         <nav class="links" aria-label="页面导航">
-            <a v-for="item in navItems" :key="item.href" :href="item.href">
+            <RouterLink v-for="item in navItems" :key="item.to" :to="item.to">
                 {{ item.label }}
-            </a>
+            </RouterLink>
         </nav>
 
         <div class="actions">
@@ -60,9 +63,13 @@ async function handleMenuClick({ key }: { key: string }) {
                     </button>
                     <template #overlay>
                         <a-menu @click="handleMenuClick">
+                            <a-menu-item key="profile">
+                                <UserOutlined />
+                                <span>个人中心</span>
+                            </a-menu-item>
                             <a-menu-item key="settings">
                                 <SettingOutlined />
-                                <span>用户设置</span>
+                                <span>账号设置</span>
                             </a-menu-item>
                             <a-menu-item key="logout">
                                 <LogoutOutlined />
@@ -127,7 +134,6 @@ async function handleMenuClick({ key }: { key: string }) {
 .brand-copy small {
     color: var(--text-muted);
     letter-spacing: 0.08em;
-    text-transform: uppercase;
     font-size: 0.78rem;
 }
 
@@ -145,6 +151,7 @@ async function handleMenuClick({ key }: { key: string }) {
     transition: color 0.24s ease;
 }
 
+.links a.router-link-active,
 .links a:hover,
 .links a:focus-visible {
     color: var(--text-strong);

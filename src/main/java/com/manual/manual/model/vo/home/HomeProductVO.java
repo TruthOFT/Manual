@@ -1,5 +1,7 @@
 package com.manual.manual.model.vo.home;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -7,7 +9,14 @@ import java.math.BigDecimal;
 @Data
 public class HomeProductVO {
 
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long categoryId;
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long artisanId;
 
     private String productName;
 

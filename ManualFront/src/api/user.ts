@@ -1,5 +1,5 @@
 import { request } from '@/api/request'
-import type { LoginUser, UserLoginRequest, UserRegisterRequest } from '@/types/user'
+import type { LoginUser, RechargeRequest, UserLoginRequest, UserRegisterRequest } from '@/types/user'
 
 export function loginUser(data: UserLoginRequest) {
     return request<LoginUser>('/user/login', {
@@ -22,5 +22,12 @@ export function getCurrentUser() {
 export function logoutUser() {
     return request<boolean>('/user/logout', {
         method: 'POST',
+    })
+}
+
+export function rechargeUser(data: RechargeRequest) {
+    return request<LoginUser>('/user/recharge', {
+        method: 'POST',
+        data,
     })
 }

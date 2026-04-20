@@ -1,6 +1,6 @@
 export type CategoryItem = {
-    id: number
-    parentId: number | null
+    id: string
+    parentId: string | null
     categoryName: string
     categoryIcon: string
     categoryDesc: string
@@ -8,7 +8,9 @@ export type CategoryItem = {
 }
 
 export type ProductCard = {
-    id: number
+    id: string
+    categoryId: string
+    artisanId: string
     productName: string
     productSubtitle: string
     productCover: string
@@ -25,7 +27,7 @@ export type ProductCard = {
 }
 
 export type ArtisanItem = {
-    id: number
+    id: string
     artisanName: string
     shopName: string
     artisanAvatar: string
@@ -38,7 +40,7 @@ export type ArtisanItem = {
 }
 
 export type RecentOrderItem = {
-    id: number
+    id: string
     orderNo: string
     productName: string
     skuName: string

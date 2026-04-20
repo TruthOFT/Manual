@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { ArrowRightOutlined, GiftOutlined, ShopOutlined } from '@ant-design/icons-vue'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 import LandingNav from '@/components/layout/LandingNav.vue'
 import { useHomePage } from '@/composables/useHomePage'
 
+const router = useRouter()
 const { errorMessage, homeData, loadHomePage, loading } = useHomePage()
 
 const operatingHighlights = [
-    '首页、作品页、匠人页现在共用同一份真实接口数据，公开展示内容已经统一打通。',
+    '首页、作品页和匠人页共用真实公开数据，前台浏览信息已经打通。',
     '精选作品、匠人信息和最近订单动态都直接来自 manual_mall 数据库。',
-    '后续继续扩展详情页、购物车和下单链路时，可以沿用这套公开展示接口。',
+    '后续继续扩展商品详情、购物车和下单链路时，可以沿用这套公开接口结构。',
 ]
 
 const categories = computed(() => homeData.value?.categories ?? [])
@@ -25,6 +27,33 @@ function getPriceRange(minPrice: number, maxPrice: number) {
 function getSupportLabel(supportCustom: number) {
     return supportCustom ? '支持定制' : '现货零售'
 }
+
+function goToProductDetail(productId: string) {
+    void router.push({
+        name: 'product-detail',
+        params: {
+            id: productId,
+        },
+    })
+}
+
+function goToArtisanDetail(artisanId: string) {
+    void router.push({
+        name: 'artisan-detail',
+        params: {
+            id: artisanId,
+        },
+    })
+}
+
+function goToCategoryProducts(categoryId: string) {
+    void router.push({
+        name: 'products',
+        query: {
+            categoryId,
+        },
+    })
+}
 </script>
 
 <template>
@@ -35,17 +64,17 @@ function getSupportLabel(supportCustom: number) {
             <div class="hero-grid">
                 <div class="hero-copy">
                     <p class="eyebrow">手作品牌展示、精选作品、匠人故事</p>
-                    <h1>把手工门店做成既有品牌温度，也方便用户浏览与下单的前台站点。</h1>
+                    <h1>把手工门店做成既有品牌温度，也方便用户浏览作品与认识匠人的前台站点。</h1>
                     <p class="lead">
-                        首页现在只保留适合公开展示的导购内容，真实数据已经接入，但不再暴露经营统计这类后台管理信息。
+                        首页现在只保留适合公开展示的导购信息，作品和匠人都已经接入真实数据，并且可以继续进入详情页查看更完整的内容。
                     </p>
 
                     <a-space size="middle" wrap>
                         <RouterLink to="/products">
                             <a-button class="manual-ant-btn manual-ant-btn-primary" size="large">查看精选作品</a-button>
                         </RouterLink>
-                        <RouterLink to="/custom">
-                            <a-button class="manual-ant-btn manual-ant-btn-soft" size="large">了解定制服务</a-button>
+                        <RouterLink to="/artisans">
+                            <a-button class="manual-ant-btn manual-ant-btn-soft" size="large">浏览匠人故事</a-button>
                         </RouterLink>
                     </a-space>
 
@@ -58,11 +87,9 @@ function getSupportLabel(supportCustom: number) {
 
                 <a-card class="hero-panel soft-card" :bordered="false">
                     <template #cover>
-                        <a-image
-                            :preview="false"
+                        <a-image :preview="false"
                             src="https://images.unsplash.com/photo-1517685352821-92cf88aee5a5?auto=format&fit=crop&w=1200&q=80"
-                            alt="handmade studio"
-                        />
+                            alt="handmade studio" />
                     </template>
 
                     <template #title>
@@ -75,7 +102,8 @@ function getSupportLabel(supportCustom: number) {
 
                     <template v-else>
                         <div v-if="signalProducts.length" class="signal-list">
-                            <div v-for="product in signalProducts" :key="product.id" class="signal-item">
+                            <div v-for="product in signalProducts" :key="product.id"
+                                class="signal-item signal-item-clickable" @click="goToProductDetail(product.id)">
                                 <a-avatar shape="square" :size="56" :src="product.productCover" />
                                 <div class="signal-body">
                                     <strong>{{ product.productName }}</strong>
@@ -104,7 +132,16 @@ function getSupportLabel(supportCustom: number) {
 
             <a-row v-else-if="categories.length" :gutter="[20, 20]">
                 <a-col v-for="category in categories" :key="category.id" :xs="24" :sm="12" :xl="6">
-                    <a-card class="soft-card image-card" hoverable :bordered="false">
+                    <a-card
+                        class="soft-card image-card category-card"
+                        hoverable
+                        :bordered="false"
+                        role="button"
+                        tabindex="0"
+                        @click="goToCategoryProducts(category.id)"
+                        @keydown.enter="goToCategoryProducts(category.id)"
+                        @keydown.space.prevent="goToCategoryProducts(category.id)"
+                    >
                         <template #cover>
                             <a-image :preview="false" :src="category.categoryIcon" :alt="category.categoryName" />
                         </template>
@@ -132,7 +169,8 @@ function getSupportLabel(supportCustom: number) {
 
             <a-row v-else-if="featuredProducts.length" :gutter="[22, 22]">
                 <a-col v-for="product in featuredProducts" :key="product.id" :xs="24" :lg="8">
-                    <a-card class="soft-card image-card product-card" hoverable :bordered="false">
+                    <a-card class="soft-card image-card product-card" hoverable :bordered="false"
+                        @click="goToProductDetail(product.id)">
                         <template #cover>
                             <a-image :preview="false" :src="product.productCover" :alt="product.productName" />
                         </template>
@@ -148,7 +186,9 @@ function getSupportLabel(supportCustom: number) {
                         <p>{{ product.productSubtitle }}</p>
 
                         <div class="product-foot">
-                            <span>{{ product.artisanName }} / {{ product.shopName }}</span>
+                            <button class="text-link" type="button" @click.stop="goToArtisanDetail(product.artisanId)">
+                                {{ product.artisanName }} / {{ product.shopName }}
+                            </button>
                             <strong>{{ getPriceRange(product.minPrice, product.maxPrice) }}</strong>
                         </div>
                     </a-card>
@@ -173,7 +213,8 @@ function getSupportLabel(supportCustom: number) {
                                     <a-avatar shape="square" :size="60" :src="item.productCover" />
                                 </template>
                                 <template #title>{{ item.productName }}</template>
-                                <template #description>{{ item.skuName }} / x{{ item.quantity }} / {{ item.finishTime }}</template>
+                                <template #description>{{ item.skuName }} / x{{ item.quantity }} / {{ item.finishTime
+                                    }}</template>
                             </a-list-item-meta>
                             <strong>CNY {{ item.totalAmount }}</strong>
                         </a-list-item>
@@ -344,6 +385,22 @@ h3 {
     background: rgba(255, 247, 238, 0.9);
 }
 
+.signal-item-clickable,
+.category-card,
+.product-card {
+    cursor: pointer;
+}
+
+.category-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-card:hover,
+.category-card:focus-visible {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 44px rgba(126, 69, 47, 0.18);
+}
+
 .signal-body {
     display: grid;
 }
@@ -382,6 +439,19 @@ h3 {
     color: var(--coral-deep);
 }
 
+.text-link {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: left;
+}
+
+.text-link:hover {
+    color: var(--coral-deep);
+}
+
 .two-col {
     grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
     align-items: start;
@@ -411,6 +481,7 @@ h3 {
 }
 
 @media (max-width: 1120px) {
+
     .hero-grid,
     .two-col {
         grid-template-columns: 1fr;

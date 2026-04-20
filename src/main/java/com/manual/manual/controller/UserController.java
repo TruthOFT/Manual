@@ -5,6 +5,7 @@ import com.manual.manual.common.ErrorCode;
 import com.manual.manual.common.ResultUtils;
 import com.manual.manual.exception.BusinessException;
 import com.manual.manual.model.dto.user.UserLoginRequest;
+import com.manual.manual.model.dto.user.UserRechargeRequest;
 import com.manual.manual.model.dto.user.UserRegisterRequest;
 import com.manual.manual.model.entity.User;
 import com.manual.manual.model.vo.LoginUserVO;
@@ -64,5 +65,10 @@ public class UserController {
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         return ResultUtils.success(userService.getLoginUserVO(loginUser));
+    }
+
+    @PostMapping("/recharge")
+    public BaseResponse<LoginUserVO> recharge(@RequestBody UserRechargeRequest rechargeRequest, HttpServletRequest request) {
+        return ResultUtils.success(userService.rechargeBalance(rechargeRequest, request));
     }
 }

@@ -1,42 +1,63 @@
 <script setup lang="ts">
-import { EnvironmentOutlined, HeartOutlined, HomeOutlined, SettingOutlined, ShoppingOutlined, UserOutlined } from '@ant-design/icons-vue'
+import {
+    EnvironmentOutlined,
+    HeartOutlined,
+    HomeOutlined,
+    SettingOutlined,
+    ShoppingOutlined,
+    SolutionOutlined,
+    UserOutlined,
+} from '@ant-design/icons-vue'
 import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const userStore = useUserStore()
+const isNormalUser = computed(() => userStore.currentUser?.userRole === 'user')
 
-const navItems = [
-    {
-        label: '个人中心',
-        path: '/profile',
-        icon: UserOutlined,
-    },
-    {
-        label: '我的订单',
-        path: '/profile/orders',
-        icon: ShoppingOutlined,
-    },
-    {
-        label: '我的收藏',
-        path: '/profile/favorites',
-        icon: HeartOutlined,
-    },
-    {
-        label: '收货地址',
-        path: '/profile/addresses',
-        icon: EnvironmentOutlined,
-    },
-    {
+const navItems = computed(() => {
+    const items = [
+        {
+            label: '个人中心',
+            path: '/profile',
+            icon: UserOutlined,
+        },
+        {
+            label: '我的订单',
+            path: '/profile/orders',
+            icon: ShoppingOutlined,
+        },
+        {
+            label: '我的收藏',
+            path: '/profile/favorites',
+            icon: HeartOutlined,
+        },
+        {
+            label: '收货地址',
+            path: '/profile/addresses',
+            icon: EnvironmentOutlined,
+        },
+    ]
+    if (isNormalUser.value) {
+        items.push({
+            label: '申请成为匠人',
+            path: '/profile/artisan-application',
+            icon: SolutionOutlined,
+        })
+    }
+    items.push({
         label: '账号设置',
         path: '/profile/settings',
         icon: SettingOutlined,
-    },
-]
+    })
+    return items
+})
 
-const displayName = computed(() => userStore.currentUser?.username || userStore.currentUser?.userAccount || '门店用户')
+const displayName = computed(
+    () => userStore.currentUser?.username || userStore.currentUser?.userAccount || '手作用户',
+)
 
 function isActive(path: string) {
     if (path === '/profile') {
@@ -53,7 +74,7 @@ function isActive(path: string) {
                 <RouterLink class="brand" to="/">
                     <span class="mark">hm</span>
                     <span class="brand-copy">
-                        <strong>手工创意门店</strong>
+                        <strong>手作创意商城</strong>
                         <small>个人中心</small>
                     </span>
                 </RouterLink>
@@ -73,6 +94,16 @@ function isActive(path: string) {
                 </a-card>
 
                 <div class="storefront-actions">
+                    <RouterLink v-if="userStore.currentUser?.userRole === 'artisan'" to="/artisan">
+                        <a-button class="manual-ant-btn manual-ant-btn-cream" size="large" block>
+                            切换到匠人工作台
+                        </a-button>
+                    </RouterLink>
+                    <RouterLink v-else-if="isNormalUser" to="/profile/artisan-application">
+                        <a-button class="manual-ant-btn manual-ant-btn-cream" size="large" block>
+                            申请成为匠人
+                        </a-button>
+                    </RouterLink>
                     <RouterLink to="/">
                         <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" block>
                             <HomeOutlined />
@@ -81,7 +112,7 @@ function isActive(path: string) {
                     </RouterLink>
                     <RouterLink to="/products">
                         <a-button class="manual-ant-btn manual-ant-btn-soft" size="large" block>
-                            继续逛作品
+                            继续逛商品
                         </a-button>
                     </RouterLink>
                 </div>

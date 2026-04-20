@@ -31,6 +31,8 @@ public interface HomeMapper {
     @Select("""
             select
                 p.id,
+                p.categoryId,
+                p.artisanId,
                 p.productName,
                 p.productSubtitle,
                 p.productCover,

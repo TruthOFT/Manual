@@ -1,12 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+import { getArtisanList } from '@/api/artisan'
 import LandingNav from '@/components/layout/LandingNav.vue'
-import { useHomePage } from '@/composables/useHomePage'
+import type { ArtisanItem } from '@/types/home'
 
-const { errorMessage, homeData, loadHomePage, loading } = useHomePage()
+const router = useRouter()
+const artisans = ref<ArtisanItem[]>([])
+const loading = ref(false)
+const errorMessage = ref('')
 
-const artisans = computed(() => homeData.value?.artisans ?? [])
+async function loadArtisans() {
+    loading.value = true
+    errorMessage.value = ''
+    try {
+        artisans.value = await getArtisanList()
+    } catch (error) {
+        errorMessage.value = error instanceof Error ? error.message : '加载匠人数据失败，请稍后重试。'
+    } finally {
+        loading.value = false
+    }
+}
+
+function goToArtisanDetail(artisanId: string) {
+    void router.push({
+        name: 'artisan-detail',
+        params: {
+            id: artisanId,
+        },
+    })
+}
+
+onMounted(() => {
+    void loadArtisans()
+})
 </script>
 
 <template>
@@ -18,14 +46,12 @@ const artisans = computed(() => homeData.value?.artisans ?? [])
         <section class="shell hero-section">
             <div class="hero-copy">
                 <p class="eyebrow">匠人故事</p>
-                <h1>让每位手作人的工坊、作品和经验，成为门店品牌的一部分。</h1>
-                <p class="lead">
-                    匠人页现在直接读取真实匠人档案和在售作品数量，方便用户从商品之外继续理解品牌背后的创作来源。
-                </p>
+                <h1>让每位手作匠人的工坊、作品和经验，成为门店品牌的一部分。</h1>
+                <p class="lead">这里展示匠人档案与故事入口，用户可以继续进入详情页查看匠人介绍和该匠人的在售作品。</p>
 
                 <a-alert v-if="errorMessage" type="error" show-icon :message="errorMessage">
                     <template #action>
-                        <a-button type="link" @click="loadHomePage(true)">重新加载</a-button>
+                        <a-button type="link" @click="loadArtisans">重新加载</a-button>
                     </template>
                 </a-alert>
             </div>
@@ -36,7 +62,7 @@ const artisans = computed(() => homeData.value?.artisans ?? [])
 
             <a-row v-else-if="artisans.length" :gutter="[22, 22]">
                 <a-col v-for="artisan in artisans" :key="artisan.id" :xs="24" :lg="8">
-                    <a-card class="soft-card artisan-card" hoverable :bordered="false">
+                    <a-card class="soft-card artisan-card" hoverable :bordered="false" @click="goToArtisanDetail(artisan.id)">
                         <template #cover>
                             <a-image :preview="false" :src="artisan.coverUrl" :alt="artisan.artisanName" />
                         </template>
@@ -59,10 +85,14 @@ const artisans = computed(() => homeData.value?.artisans ?? [])
                         <p class="card-copy">
                             {{
                                 artisan.supportCustom
-                                    ? '支持礼盒、企业赠礼和个性化文字定制，适合做品牌礼赠和节庆专题。'
+                                    ? '支持礼盒、企业赠礼和个性化定制，适合继续进入详情页了解匠人的作品方向。'
                                     : '以现货零售和日常陈列作品为主，强调稳定出品和长期店铺风格。'
                             }}
                         </p>
+
+                        <a-button class="manual-ant-btn manual-ant-btn-ghost" @click.stop="goToArtisanDetail(artisan.id)">
+                            查看匠人详情
+                        </a-button>
                     </a-card>
                 </a-col>
             </a-row>
@@ -143,6 +173,10 @@ h3 {
     border-radius: 28px;
     background: rgba(255, 253, 248, 0.92);
     box-shadow: var(--shadow);
+}
+
+.artisan-card {
+    cursor: pointer;
 }
 
 .artisan-card :deep(.ant-card-cover img) {

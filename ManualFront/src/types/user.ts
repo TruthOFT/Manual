@@ -1,5 +1,5 @@
 export type LoginUser = {
-    id: number
+    id: number | string
     username: string
     userAccount: string
     avatarUrl: string
@@ -24,4 +24,8 @@ export type UserRegisterRequest = {
     userAccount: string
     userPassword: string
     checkPassword: string
+}
+
+export type RechargeRequest = {
+    amount: number | string
 }

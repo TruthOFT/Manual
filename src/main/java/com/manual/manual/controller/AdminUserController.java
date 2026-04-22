@@ -32,28 +32,28 @@ public class AdminUserController {
                                                      @RequestParam(required = false) String userRole,
                                                      @RequestParam(required = false) Integer userStatus,
                                                      HttpServletRequest request) {
-        return ResultUtils.success(userService.listAdminUsers(keyword, userRole, userStatus, request));
+        return ResultUtils.success(userService.listAdminUsers(keyword, userRole, userStatus, request), "获取用户列表成功");
     }
 
     @GetMapping("/{id}")
     public BaseResponse<AdminUserVO> getUserDetail(@PathVariable Long id, HttpServletRequest request) {
-        return ResultUtils.success(userService.getAdminUser(id, request));
+        return ResultUtils.success(userService.getAdminUser(id, request), "获取用户详情成功");
     }
 
     @PostMapping
     public BaseResponse<Long> createUser(@RequestBody AdminUserCreateRequest createRequest, HttpServletRequest request) {
-        return ResultUtils.success(userService.createAdminUser(createRequest, request));
+        return ResultUtils.success(userService.createAdminUser(createRequest, request), "创建用户成功");
     }
 
     @PutMapping("/{id}")
     public BaseResponse<Boolean> updateUser(@PathVariable Long id,
                                             @RequestBody AdminUserUpdateRequest updateRequest,
                                             HttpServletRequest request) {
-        return ResultUtils.success(userService.updateAdminUser(id, updateRequest, request));
+        return ResultUtils.success(userService.updateAdminUser(id, updateRequest, request), "更新用户成功");
     }
 
     @DeleteMapping("/{id}")
     public BaseResponse<Boolean> deleteUser(@PathVariable Long id, HttpServletRequest request) {
-        return ResultUtils.success(userService.deleteAdminUser(id, request));
+        return ResultUtils.success(userService.deleteAdminUser(id, request), "删除用户成功");
     }
 }

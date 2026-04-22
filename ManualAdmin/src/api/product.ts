@@ -1,5 +1,10 @@
 import { request } from '@/api/request'
-import type { AdminProductDetail, AdminProductListItem } from '@/types/product'
+import type {
+    AdminProductDetail,
+    AdminProductListItem,
+    AdminProductMeta,
+    AdminProductSaveRequest,
+} from '@/types/product'
 
 type ProductListParams = {
     auditStatus?: number
@@ -15,6 +20,30 @@ export function getAdminProducts(params: ProductListParams = {}) {
 
 export function getAdminProductDetail(productId: string) {
     return request<AdminProductDetail>(`/admin/products/${productId}`)
+}
+
+export function getAdminProductMeta() {
+    return request<AdminProductMeta>('/admin/products/meta')
+}
+
+export function createAdminProduct(data: AdminProductSaveRequest) {
+    return request<string>('/admin/products', {
+        method: 'POST',
+        data,
+    })
+}
+
+export function updateAdminProduct(productId: string, data: AdminProductSaveRequest) {
+    return request<boolean>(`/admin/products/${productId}`, {
+        method: 'PUT',
+        data,
+    })
+}
+
+export function deleteAdminProduct(productId: string) {
+    return request<boolean>(`/admin/products/${productId}`, {
+        method: 'DELETE',
+    })
 }
 
 export function approveAdminProduct(productId: string) {

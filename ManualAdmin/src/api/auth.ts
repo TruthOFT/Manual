@@ -9,7 +9,9 @@ export function loginAdmin(data: AdminLoginRequest) {
 }
 
 export function getCurrentAdmin() {
-    return request<LoginUser>('/admin/auth/get/login')
+    return request<LoginUser>('/admin/auth/get/login', {
+        showSuccessMessage: false,
+    })
 }
 
 export function logoutAdmin() {

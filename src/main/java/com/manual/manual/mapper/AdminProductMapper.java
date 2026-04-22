@@ -1,10 +1,14 @@
 package com.manual.manual.mapper;
 
+import com.manual.manual.model.dto.product.AdminProductSaveRequest;
 import com.manual.manual.model.vo.artisancenter.ArtisanCenterProductSkuVO;
+import com.manual.manual.model.vo.product.AdminProductArtisanOptionVO;
+import com.manual.manual.model.vo.product.AdminProductCategoryOptionVO;
 import com.manual.manual.model.vo.product.AdminProductDetailVO;
 import com.manual.manual.model.vo.product.AdminProductListItemVO;
 import com.manual.manual.model.vo.product.ProductImageVO;
 import com.manual.manual.model.vo.product.ProductMaterialVO;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -14,6 +18,37 @@ import java.util.List;
 
 @Mapper
 public interface AdminProductMapper {
+
+    @Select("""
+            select
+                c.id,
+                c.parentId,
+                p.categoryName as parentName,
+                c.categoryName,
+                c.categoryLevel
+            from category c
+            left join category p on p.id = c.parentId and p.isDelete = 0
+            where c.isDelete = 0
+              and c.isEnable = 1
+            order by c.categoryLevel asc, c.sortOrder asc, c.id asc
+            """)
+    List<AdminProductCategoryOptionVO> selectAdminProductCategories();
+
+    @Select("""
+            select
+                a.id,
+                a.userId,
+                a.artisanName,
+                a.shopName,
+                u.userAccount,
+                u.userName
+            from artisan_profile a
+            inner join users u on u.id = a.userId and u.isDelete = 0
+            where a.isDelete = 0
+              and a.auditStatus = 1
+            order by a.updateTime desc, a.id desc
+            """)
+    List<AdminProductArtisanOptionVO> selectAdminProductArtisans();
 
     @Select({
             "<script>",
@@ -136,6 +171,142 @@ public interface AdminProductMapper {
             order by id asc
             """)
     List<ArtisanCenterProductSkuVO> selectProductSkus(@Param("productId") Long productId);
+
+    @Select("""
+            select count(1)
+            from category
+            where id = #{categoryId}
+              and isDelete = 0
+              and isEnable = 1
+            """)
+    int countEnabledCategoryById(@Param("categoryId") Long categoryId);
+
+    @Select("""
+            select count(1)
+            from artisan_profile
+            where id = #{artisanId}
+              and isDelete = 0
+              and auditStatus = 1
+            """)
+    int countEnabledArtisanById(@Param("artisanId") Long artisanId);
+
+    @Insert("""
+            insert into product (
+                id,
+                categoryId,
+                artisanId,
+                productName,
+                productSubtitle,
+                productCover,
+                productDesc,
+                craftType,
+                materialDesc,
+                originPlace,
+                handmadeCycleDays,
+                supportCustom,
+                inventory,
+                soldQuantity,
+                favoriteCount,
+                reviewCount,
+                minPrice,
+                maxPrice,
+                auditStatus,
+                status,
+                sortOrder,
+                createTime,
+                updateTime,
+                isDelete
+            ) values (
+                #{productId},
+                #{request.categoryId},
+                #{request.artisanId},
+                #{request.productName},
+                #{request.productSubtitle},
+                #{request.productCover},
+                #{request.productDesc},
+                #{request.craftType},
+                #{request.materialDesc},
+                #{request.originPlace},
+                #{request.handmadeCycleDays},
+                #{request.supportCustom},
+                #{request.inventory},
+                0,
+                0,
+                0,
+                #{request.minPrice},
+                #{request.maxPrice},
+                #{request.auditStatus},
+                #{request.status},
+                #{request.sortOrder},
+                now(),
+                now(),
+                0
+            )
+            """)
+    int insertAdminProduct(@Param("productId") Long productId,
+                           @Param("request") AdminProductSaveRequest request);
+
+    @Update("""
+            update product
+            set categoryId = #{request.categoryId},
+                artisanId = #{request.artisanId},
+                productName = #{request.productName},
+                productSubtitle = #{request.productSubtitle},
+                productCover = #{request.productCover},
+                productDesc = #{request.productDesc},
+                craftType = #{request.craftType},
+                materialDesc = #{request.materialDesc},
+                originPlace = #{request.originPlace},
+                handmadeCycleDays = #{request.handmadeCycleDays},
+                supportCustom = #{request.supportCustom},
+                inventory = #{request.inventory},
+                minPrice = #{request.minPrice},
+                maxPrice = #{request.maxPrice},
+                auditStatus = #{request.auditStatus},
+                status = #{request.status},
+                sortOrder = #{request.sortOrder},
+                updateTime = now()
+            where id = #{productId}
+              and isDelete = 0
+            """)
+    int updateAdminProduct(@Param("productId") Long productId,
+                           @Param("request") AdminProductSaveRequest request);
+
+    @Update("""
+            update product
+            set isDelete = 1,
+                updateTime = now()
+            where id = #{productId}
+              and isDelete = 0
+            """)
+    int deleteAdminProduct(@Param("productId") Long productId);
+
+    @Update("""
+            update product_image
+            set isDelete = 1,
+                updateTime = now()
+            where productId = #{productId}
+              and isDelete = 0
+            """)
+    int deleteAdminProductImages(@Param("productId") Long productId);
+
+    @Update("""
+            update product_material
+            set isDelete = 1,
+                updateTime = now()
+            where productId = #{productId}
+              and isDelete = 0
+            """)
+    int deleteAdminProductMaterials(@Param("productId") Long productId);
+
+    @Update("""
+            update product_sku
+            set isDelete = 1,
+                updateTime = now()
+            where productId = #{productId}
+              and isDelete = 0
+            """)
+    int deleteAdminProductSkus(@Param("productId") Long productId);
 
     @Update("""
             update product

@@ -38,17 +38,17 @@ public class AdminAuthController {
                 request,
                 response
         );
-        return ResultUtils.success(loginUserVO);
+        return ResultUtils.success(loginUserVO, "管理员登录成功");
     }
 
     @PostMapping("/logout")
     public BaseResponse<Boolean> adminLogout(HttpServletRequest request) {
-        return ResultUtils.success(userService.adminLogout(request));
+        return ResultUtils.success(userService.adminLogout(request), "管理员退出登录成功");
     }
 
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getAdminLoginUser(HttpServletRequest request) {
         User loginUser = userService.getAdminLoginUser(request);
-        return ResultUtils.success(userService.getLoginUserVO(loginUser));
+        return ResultUtils.success(userService.getLoginUserVO(loginUser), "获取管理员登录信息成功");
     }
 }

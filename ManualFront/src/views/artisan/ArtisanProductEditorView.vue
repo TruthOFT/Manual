@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { DeleteOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { message, type UploadProps } from 'ant-design-vue'
-import { computed, onMounted, reactive, ref, type Ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
@@ -10,7 +10,7 @@ import {
     getArtisanProductDetail,
     updateArtisanProduct,
 } from '@/api/artisan-center'
-import { uploadFile } from '@/api/upload'
+import { resolveUploadUrl, uploadFile } from '@/api/upload'
 import type {
     ArtisanCategoryOption,
     ArtisanProductDetail,
@@ -22,9 +22,9 @@ const router = useRouter()
 
 const loading = ref(false)
 const saving = ref(false)
-const uploadingCover = ref(false)
 const errorMessage = ref('')
 const categories = ref<ArtisanCategoryOption[]>([])
+const pendingImageFiles = new Map<string, File>()
 
 const isEditMode = computed(() => typeof route.params.id === 'string')
 const noCategoryAvailable = computed(() => categories.value.length === 0)
@@ -68,7 +68,42 @@ function formatCategoryLabel(item: ArtisanCategoryOption) {
     return item.categoryName
 }
 
+function isTempFileUrl(url?: string | null) {
+    return Boolean(url && url.startsWith('blob:'))
+}
+
+function createTempFileUrl(file: File) {
+    const tempUrl = URL.createObjectURL(file)
+    pendingImageFiles.set(tempUrl, file)
+    return tempUrl
+}
+
+function releaseTempFileUrl(url?: string | null) {
+    if (!isTempFileUrl(url) || !url) {
+        return
+    }
+    pendingImageFiles.delete(url)
+    URL.revokeObjectURL(url)
+}
+
+function clearAllTempFiles() {
+    for (const tempUrl of pendingImageFiles.keys()) {
+        URL.revokeObjectURL(tempUrl)
+    }
+    pendingImageFiles.clear()
+}
+
+function setTempImageValue(setter: () => void, oldUrl?: string | null) {
+    releaseTempFileUrl(oldUrl)
+    setter()
+}
+
+function resolveImageUrl(url?: string | null) {
+    return resolveUploadUrl(url)
+}
+
 function applyProduct(detail: ArtisanProductDetail) {
+    clearAllTempFiles()
     form.categoryId = detail.categoryId
     form.productName = detail.productName
     form.productSubtitle = detail.productSubtitle || ''
@@ -151,9 +186,12 @@ function addImage() {
 
 function removeImage(index: number) {
     if (form.images.length === 1) {
+        releaseTempFileUrl(form.images[0]?.imageUrl)
         form.images[0] = { imageUrl: '', imageType: 'detail', sortOrder: 1 }
         return
     }
+    const removed = form.images[index]
+    releaseTempFileUrl(removed?.imageUrl)
     form.images.splice(index, 1)
 }
 
@@ -190,6 +228,7 @@ function addSku() {
 
 function removeSku(index: number) {
     if (form.skus.length === 1) {
+        releaseTempFileUrl(form.skus[0]?.skuCover)
         form.skus[0] = {
             skuName: '',
             skuCover: form.productCover,
@@ -203,56 +242,41 @@ function removeSku(index: number) {
         }
         return
     }
+    const removed = form.skus[index]
+    releaseTempFileUrl(removed?.skuCover)
     form.skus.splice(index, 1)
 }
 
-async function uploadProductImage(
-    file: File,
-    onSuccess: (url: string) => void,
-    loadingRef?: Ref<boolean>,
-) {
-    if (loadingRef) {
-        loadingRef.value = true
-    }
-    try {
-        const url = await uploadFile('product', file)
-        onSuccess(url)
-        message.success('图片上传成功')
-    } catch (error) {
-        message.error(error instanceof Error ? error.message : '图片上传失败')
-    } finally {
-        if (loadingRef) {
-            loadingRef.value = false
-        }
-    }
+const beforeUploadCover: UploadProps['beforeUpload'] = (file) => {
+    setTempImageValue(() => {
+        form.productCover = createTempFileUrl(file as File)
+    }, form.productCover)
     return false
 }
 
-const beforeUploadCover: UploadProps['beforeUpload'] = async (file) => {
-    return uploadProductImage(file as File, (url) => {
-        form.productCover = url
-    }, uploadingCover)
-}
-
 function beforeUploadDetailImage(index: number): UploadProps['beforeUpload'] {
-    return async (file) => {
-        return uploadProductImage(file as File, (url) => {
-            const image = form.images[index]
-            if (image) {
-                image.imageUrl = url
-            }
-        })
+    return (file) => {
+        const image = form.images[index]
+        if (!image) {
+            return false
+        }
+        setTempImageValue(() => {
+            image.imageUrl = createTempFileUrl(file as File)
+        }, image.imageUrl)
+        return false
     }
 }
 
 function beforeUploadSkuCover(index: number): UploadProps['beforeUpload'] {
-    return async (file) => {
-        return uploadProductImage(file as File, (url) => {
-            const sku = form.skus[index]
-            if (sku) {
-                sku.skuCover = url
-            }
-        })
+    return (file) => {
+        const sku = form.skus[index]
+        if (!sku) {
+            return false
+        }
+        setTempImageValue(() => {
+            sku.skuCover = createTempFileUrl(file as File)
+        }, sku.skuCover)
+        return false
     }
 }
 
@@ -272,6 +296,49 @@ function normalizeRequest(): ArtisanProductSaveRequest {
     }
 }
 
+async function ensureUploadedProductFile(url: string, uploadedCache: Map<string, string>) {
+    if (!isTempFileUrl(url)) {
+        return url
+    }
+    const cacheHit = uploadedCache.get(url)
+    if (cacheHit) {
+        return cacheHit
+    }
+    const file = pendingImageFiles.get(url)
+    if (!file) {
+        throw new Error('暂存图片不存在，请重新选择后提交')
+    }
+    const uploadedUrl = await uploadFile('product', file)
+    pendingImageFiles.delete(url)
+    URL.revokeObjectURL(url)
+    uploadedCache.set(url, uploadedUrl)
+    return uploadedUrl
+}
+
+async function buildSaveRequest() {
+    const payload = normalizeRequest()
+    const uploadedCache = new Map<string, string>()
+    payload.productCover = await ensureUploadedProductFile(payload.productCover, uploadedCache)
+    payload.images = await Promise.all(
+        payload.images.map(async (item) => ({
+            ...item,
+            imageUrl: await ensureUploadedProductFile(item.imageUrl, uploadedCache),
+        })),
+    )
+    payload.skus = await Promise.all(
+        payload.skus.map(async (item) => {
+            const sourceCover = item.skuCover || payload.productCover
+            return {
+                ...item,
+                skuCover: sourceCover
+                    ? await ensureUploadedProductFile(sourceCover, uploadedCache)
+                    : '',
+            }
+        }),
+    )
+    return payload
+}
+
 async function handleSave() {
     if (noCategoryAvailable.value) {
         errorMessage.value = '当前没有可用分类，请先在管理员端启用分类'
@@ -280,12 +347,11 @@ async function handleSave() {
     saving.value = true
     errorMessage.value = ''
     try {
+        const payload = await buildSaveRequest()
         if (isEditMode.value && typeof route.params.id === 'string') {
-            await updateArtisanProduct(route.params.id, normalizeRequest())
-            message.success('商品已更新')
+            await updateArtisanProduct(route.params.id, payload)
         } else {
-            const productId = await createArtisanProduct(normalizeRequest())
-            message.success('商品草稿已创建')
+            const productId = await createArtisanProduct(payload)
             await router.replace(`/artisan/products/${productId}/edit`)
         }
     } catch (error) {
@@ -298,15 +364,19 @@ async function handleSave() {
 onMounted(() => {
     void loadEditorData()
 })
+
+onBeforeUnmount(() => {
+    clearAllTempFiles()
+})
 </script>
 
 <template>
     <div class="artisan-view">
         <a-card class="artisan-hero-card" :bordered="false">
             <p class="eyebrow">{{ isEditMode ? '编辑商品' : '新建商品' }}</p>
-            <h1>先上传图片，再维护商品资料、材质和 SKU</h1>
+            <h1>先选择图片暂存，点击保存时统一上传并写入商品数据</h1>
             <p class="lead">
-                所有图片会先上传到后端 `upload/product`，接口返回 URL 后再写入商品表单。
+                图片会在点击“保存商品”时上传到后端 `upload/product`，成功后再把返回 URL 写入请求。
             </p>
         </a-card>
 
@@ -401,13 +471,13 @@ onMounted(() => {
                     <a-upload :show-upload-list="false" accept="image/*" :before-upload="beforeUploadCover">
                         <a-button>
                             <UploadOutlined />
-                            上传封面
+                            选择封面
                         </a-button>
                     </a-upload>
                 </div>
                 <div class="cover-panel">
-                    <a-image v-if="form.productCover" :src="form.productCover" :width="220" />
-                    <a-empty v-else description="请先上传商品封面" />
+                    <a-image v-if="form.productCover" :src="resolveImageUrl(form.productCover)" :width="220" />
+                    <a-empty v-else description="请先选择商品封面" />
                 </div>
             </section>
 
@@ -422,8 +492,8 @@ onMounted(() => {
                 <div class="list-grid">
                     <div v-for="(item, index) in form.images" :key="`image-${index}`" class="line-card image-card">
                         <div class="image-preview">
-                            <a-image v-if="item.imageUrl" :src="item.imageUrl" :width="120" />
-                            <a-empty v-else description="未上传" />
+                            <a-image v-if="item.imageUrl" :src="resolveImageUrl(item.imageUrl)" :width="120" />
+                            <a-empty v-else description="未选择" />
                         </div>
                         <div class="image-fields">
                             <a-input v-model:value="item.imageType" size="large" placeholder="例如 detail" />
@@ -435,7 +505,7 @@ onMounted(() => {
                                 >
                                     <a-button>
                                         <UploadOutlined />
-                                        上传图片
+                                        选择图片
                                     </a-button>
                                 </a-upload>
                                 <a-button danger @click="removeImage(index)">
@@ -485,7 +555,7 @@ onMounted(() => {
                     <div v-for="(item, index) in form.skus" :key="`sku-${index}`" class="line-card sku-card">
                         <a-input v-model:value="item.skuName" size="large" placeholder="SKU 名称" />
                         <div class="sku-upload">
-                            <a-image v-if="item.skuCover" :src="item.skuCover" :width="108" />
+                            <a-image v-if="item.skuCover" :src="resolveImageUrl(item.skuCover)" :width="108" />
                             <a-upload
                                 :show-upload-list="false"
                                 accept="image/*"
@@ -493,7 +563,7 @@ onMounted(() => {
                             >
                                 <a-button>
                                     <UploadOutlined />
-                                    上传 SKU 图
+                                    选择 SKU 图
                                 </a-button>
                             </a-upload>
                         </div>
@@ -546,7 +616,7 @@ onMounted(() => {
                 <a-button
                     class="manual-ant-btn manual-ant-btn-primary"
                     size="large"
-                    :loading="saving || uploadingCover"
+                    :loading="saving"
                     :disabled="noCategoryAvailable"
                     @click="handleSave"
                 >

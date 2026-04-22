@@ -6,8 +6,18 @@ spring:
     url: jdbc:mysql://localhost:3306/manual_mall?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
   session:
     timeout: 86400
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
 
 server:
   servlet:
@@ -22,3 +32,7 @@ mybatis-plus:
       logic-delete-field: isDelete
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+manual:
+  order:
+    timeout-minutes: 15

@@ -30,7 +30,6 @@ async function handleSubmit() {
     submitting.value = true
     try {
         await authStore.login(formState)
-        message.success('管理员登录成功')
         const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
         await router.replace(redirect)
     } catch (error) {

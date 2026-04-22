@@ -18,6 +18,7 @@ import java.util.UUID;
 public class UploadServiceImpl implements UploadService {
 
     private static final Set<String> ALLOWED_BIZ = Set.of("product", "user");
+    private static final long MAX_UPLOAD_SIZE = 100L * 1024L * 1024L;
 
     @Override
     public String upload(String biz, MultipartFile file) {
@@ -26,6 +27,9 @@ public class UploadServiceImpl implements UploadService {
         }
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "Upload file is required");
+        }
+        if (file.getSize() > MAX_UPLOAD_SIZE) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "上传文件不能超过100M");
         }
         String extension = getSafeExtension(file.getOriginalFilename());
         String fileName = UUID.randomUUID().toString().replace("-", "") + extension;

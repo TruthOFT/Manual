@@ -9,6 +9,7 @@ import {
     getAdminArtisanApplications,
     rejectAdminArtisanApplication,
 } from '@/api/artisan-application'
+import { API_CONTEXT_PATH, BASE_URL } from '@/api/request'
 import type {
     AdminArtisanApplicationDetail,
     AdminArtisanApplicationItem,
@@ -62,7 +63,54 @@ function getStatusColor(status: number) {
 }
 
 function formatMoney(value: number | string | null | undefined) {
-    return `￥${Number(value || 0).toFixed(2)}`
+    return `¥${Number(value || 0).toFixed(2)}`
+}
+
+function resolveImageUrl(url?: string | null) {
+    if (!url) {
+        return ''
+    }
+    let value = String(url).trim()
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1).trim()
+    }
+    if (value.startsWith('[')) {
+        try {
+            const parsed = JSON.parse(value)
+            if (Array.isArray(parsed) && typeof parsed[0] === 'string') {
+                value = parsed[0].trim()
+            }
+        } catch {
+            // ignore malformed JSON-like legacy data
+        }
+    }
+    value = value.replaceAll('\\', '/')
+    if (!value) {
+        return ''
+    }
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+        return value
+    }
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+        try {
+            const parsedUrl = new URL(value)
+            if ((parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1')
+                && parsedUrl.pathname.startsWith('/upload/')) {
+                return `${BASE_URL}${API_CONTEXT_PATH}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+            }
+        } catch {
+            // keep original value
+        }
+        return value
+    }
+    const normalizedPath = value.startsWith('/') ? value : `/${value}`
+    if (normalizedPath.startsWith(`${API_CONTEXT_PATH}/`)) {
+        return `${BASE_URL}${normalizedPath}`
+    }
+    if (normalizedPath.startsWith('/upload/')) {
+        return `${BASE_URL}${API_CONTEXT_PATH}${normalizedPath}`
+    }
+    return `${BASE_URL}${normalizedPath}`
 }
 
 async function loadApplications() {
@@ -99,7 +147,6 @@ async function handleApprove() {
     actionLoading.value = true
     try {
         await approveAdminArtisanApplication(currentDetail.value.id)
-        message.success('匠人申请已审核通过')
         currentDetail.value = await getAdminArtisanApplicationDetail(currentDetail.value.id)
         await loadApplications()
     } catch (error) {
@@ -127,7 +174,6 @@ async function handleReject() {
         await rejectAdminArtisanApplication(currentDetail.value.id, {
             auditRemark: rejectRemark.value.trim(),
         })
-        message.success('匠人申请已驳回')
         rejectModalVisible.value = false
         currentDetail.value = await getAdminArtisanApplicationDetail(currentDetail.value.id)
         await loadApplications()
@@ -209,7 +255,7 @@ onMounted(() => {
         <a-skeleton v-if="detailLoading" active :paragraph="{ rows: 12 }" />
         <div v-else-if="currentDetail" class="detail-stack">
             <div class="detail-head">
-                <a-avatar :size="68" :src="currentDetail.artisanAvatar || currentDetail.userAvatarUrl">
+                <a-avatar :size="68" :src="resolveImageUrl(currentDetail.artisanAvatar || currentDetail.userAvatarUrl)">
                     {{ (currentDetail.artisanName || '匠').slice(0, 1) }}
                 </a-avatar>
                 <div>
@@ -264,7 +310,7 @@ onMounted(() => {
 
             <div class="image-block">
                 <h3>店铺封面</h3>
-                <a-image v-if="currentDetail.coverUrl" :src="currentDetail.coverUrl" :width="220" />
+                <a-image v-if="currentDetail.coverUrl" :src="resolveImageUrl(currentDetail.coverUrl)" :width="220" />
                 <a-empty v-else description="未上传封面" />
             </div>
 
@@ -274,7 +320,7 @@ onMounted(() => {
                     <a-image
                         v-for="item in currentDetail.qualificationImages"
                         :key="item"
-                        :src="item"
+                        :src="resolveImageUrl(item)"
                         :width="140"
                     />
                     <a-empty

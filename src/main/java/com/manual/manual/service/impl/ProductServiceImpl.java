@@ -46,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
         }
         productDetailVO.setImages(defaultList(productMapper.selectProductImages(productId)));
         productDetailVO.setMaterials(defaultList(productMapper.selectProductMaterials(productId)));
+        productDetailVO.setSkus(defaultList(productMapper.selectProductSkus(productId)));
         productDetailVO.setReviews(defaultList(productMapper.selectProductReviews(productId)));
         return productDetailVO;
     }

@@ -17,6 +17,28 @@ export type AdminProductListItem = {
     updateTime: string | null
 }
 
+export type AdminProductCategoryOption = {
+    id: string
+    parentId: string | null
+    parentName: string | null
+    categoryName: string
+    categoryLevel: number
+}
+
+export type AdminProductArtisanOption = {
+    id: string
+    userId: string
+    artisanName: string
+    shopName: string
+    userAccount: string
+    userName: string
+}
+
+export type AdminProductMeta = {
+    categories: AdminProductCategoryOption[]
+    artisans: AdminProductArtisanOption[]
+}
+
 export type AdminProductImage = {
     id: string
     imageUrl: string
@@ -72,4 +94,24 @@ export type AdminProductDetail = {
     images: AdminProductImage[]
     materials: AdminProductMaterial[]
     skus: AdminProductSku[]
+}
+
+export type AdminProductSaveRequest = {
+    categoryId: string
+    artisanId: string
+    productName: string
+    productSubtitle: string
+    productCover: string
+    productDesc: string
+    craftType: string
+    materialDesc: string
+    originPlace: string
+    handmadeCycleDays: number
+    supportCustom: number
+    inventory: number
+    minPrice: number | string
+    maxPrice: number | string
+    auditStatus: number
+    status: number
+    sortOrder: number
 }

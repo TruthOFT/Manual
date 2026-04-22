@@ -23,11 +23,11 @@ public class ProductController {
     public BaseResponse<ProductListPageVO> listProducts(@RequestParam(required = false) Long categoryId,
                                                         @RequestParam(required = false) String originPlace,
                                                         @RequestParam(required = false) String materialName) {
-        return ResultUtils.success(productService.listProducts(categoryId, originPlace, materialName));
+        return ResultUtils.success(productService.listProducts(categoryId, originPlace, materialName), "获取商品列表成功");
     }
 
     @GetMapping("/{productId}")
     public BaseResponse<ProductDetailVO> getProductDetail(@PathVariable Long productId) {
-        return ResultUtils.success(productService.getProductDetail(productId));
+        return ResultUtils.success(productService.getProductDetail(productId), "获取商品详情成功");
     }
 }

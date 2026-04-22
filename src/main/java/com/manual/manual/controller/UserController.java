@@ -36,7 +36,7 @@ public class UserController {
                 userRegisterRequest.getUserPassword(),
                 userRegisterRequest.getCheckPassword()
         );
-        return ResultUtils.success(result);
+        return ResultUtils.success(result, "注册成功");
     }
 
     @PostMapping("/login")
@@ -53,22 +53,22 @@ public class UserController {
                 request,
                 response
         );
-        return ResultUtils.success(loginUserVO);
+        return ResultUtils.success(loginUserVO, "登录成功");
     }
 
     @PostMapping("/logout")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
-        return ResultUtils.success(userService.userLogout(request));
+        return ResultUtils.success(userService.userLogout(request), "退出登录成功");
     }
 
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
-        return ResultUtils.success(userService.getLoginUserVO(loginUser));
+        return ResultUtils.success(userService.getLoginUserVO(loginUser), "获取登录信息成功");
     }
 
     @PostMapping("/recharge")
     public BaseResponse<LoginUserVO> recharge(@RequestBody UserRechargeRequest rechargeRequest, HttpServletRequest request) {
-        return ResultUtils.success(userService.rechargeBalance(rechargeRequest, request));
+        return ResultUtils.success(userService.rechargeBalance(rechargeRequest, request), "充值成功");
     }
 }

@@ -20,6 +20,6 @@ public class UploadController {
 
     @PostMapping("/{biz}")
     public BaseResponse<String> upload(@PathVariable String biz, @RequestParam("file") MultipartFile file) {
-        return ResultUtils.success(uploadService.upload(biz, file));
+        return ResultUtils.success(uploadService.upload(biz, file), "上传成功");
     }
 }

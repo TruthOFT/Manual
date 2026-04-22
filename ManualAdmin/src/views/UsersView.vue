@@ -133,7 +133,6 @@ async function handleSave() {
                 balance: form.balance,
             }
             await updateAdminUser(currentEditId.value, payload)
-            message.success('用户已更新')
         } else {
             const payload: AdminUserCreateRequest = {
                 userAccount: form.userAccount,
@@ -148,7 +147,6 @@ async function handleSave() {
                 balance: form.balance,
             }
             await createAdminUser(payload)
-            message.success('用户已创建')
         }
         modalVisible.value = false
         resetForm()
@@ -170,7 +168,6 @@ function handleDelete(id: string) {
         async onOk() {
             try {
                 await deleteAdminUser(id)
-                message.success('用户已删除')
                 await loadUsers()
             } catch (error) {
                 message.error(error instanceof Error ? error.message : '删除用户失败')

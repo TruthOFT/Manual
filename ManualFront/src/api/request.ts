@@ -9,11 +9,15 @@ type BaseResponse<T> = {
     message: string
 }
 
+type RequestOptions = AxiosRequestConfig & {
+    showSuccessMessage?: boolean
+}
+
 export const BASE_URL = 'http://localhost:8080'
-const CONTEXT_PATH = '/api'
+export const API_CONTEXT_PATH = '/api'
 
 const myAxios = axios.create({
-    baseURL: BASE_URL + CONTEXT_PATH,
+    baseURL: BASE_URL + API_CONTEXT_PATH,
     timeout: 60000,
     withCredentials: true,
 })
@@ -44,13 +48,18 @@ myAxios.interceptors.response.use(
     },
 )
 
-export function request<T>(url: string, options: AxiosRequestConfig = {}): Promise<T> {
+export function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
     return myAxios.request<BaseResponse<T>>({
         url,
         ...options,
     }).then((response) => {
         if (response.data.code !== 0) {
             throw new Error(response.data.message || 'Request failed')
+        }
+        const method = String(options.method ?? 'get').toLowerCase()
+        const shouldShowSuccessMessage = options.showSuccessMessage ?? method !== 'get'
+        if (shouldShowSuccessMessage && response.data.message) {
+            message.success(response.data.message)
         }
         return response.data.data
     })

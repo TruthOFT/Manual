@@ -19,6 +19,6 @@ public class AdminDashboardController {
 
     @GetMapping("/overview")
     public BaseResponse<AdminDashboardOverviewVO> getOverview(HttpServletRequest request) {
-        return ResultUtils.success(adminDashboardService.getOverview(request));
+        return ResultUtils.success(adminDashboardService.getOverview(request), "获取仪表盘数据成功");
     }
 }

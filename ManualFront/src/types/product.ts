@@ -29,6 +29,21 @@ export type ProductMaterial = {
     materialRatio: string | null
 }
 
+export type ProductSku = {
+    id: string
+    skuCode: string
+    skuName: string
+    skuCover: string | null
+    specText: string | null
+    materialType: string | null
+    weight: number | string | null
+    price: number | string
+    originalPrice: number | string
+    stock: number
+    lockedStock: number
+    status: number
+}
+
 export type ProductReview = {
     id: string
     score: number
@@ -64,5 +79,6 @@ export type ProductDetail = {
     artisanAvatar: string
     images: ProductImage[]
     materials: ProductMaterial[]
+    skus: ProductSku[]
     reviews: ProductReview[]
 }

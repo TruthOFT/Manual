@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,6 +41,7 @@ class AdminCategoryControllerTest {
         categoryVO.setId(3100000000000003001L);
         categoryVO.setCategoryName("陶艺");
         categoryVO.setCategoryLevel(1);
+        categoryVO.setIsEnable(1);
 
         when(categoryService.listAdminCategories(any())).thenReturn(List.of(categoryVO));
 
@@ -48,7 +50,8 @@ class AdminCategoryControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].categoryName").value("陶艺"))
-                .andExpect(jsonPath("$.data[0].categoryLevel").value(1));
+                .andExpect(jsonPath("$.data[0].categoryLevel").value(1))
+                .andExpect(jsonPath("$.data[0].isEnable").value(1));
     }
 
     @Test
@@ -57,13 +60,15 @@ class AdminCategoryControllerTest {
         categoryVO.setId(3100000000000003005L);
         categoryVO.setCategoryName("茶器杯具");
         categoryVO.setParentId(3100000000000003001L);
+        categoryVO.setIsEnable(0);
 
         when(categoryService.getAdminCategory(eq(3100000000000003005L), any())).thenReturn(categoryVO);
 
         mockMvc.perform(get("/admin/categories/3100000000000003005").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.categoryName").value("茶器杯具"));
+                .andExpect(jsonPath("$.data.categoryName").value("茶器杯具"))
+                .andExpect(jsonPath("$.data.isEnable").value(0));
     }
 
     @Test
@@ -82,5 +87,24 @@ class AdminCategoryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").value("3100000000000003099"));
+    }
+
+    @Test
+    void shouldUpdateCategoryDisplayStatus() throws Exception {
+        AdminCategorySaveRequest requestBody = new AdminCategorySaveRequest();
+        requestBody.setCategoryName("陶艺");
+        requestBody.setCategoryLevel(1);
+        requestBody.setSortOrder(10);
+        requestBody.setIsEnable(0);
+
+        when(categoryService.updateAdminCategory(eq(3100000000000003001L), any(AdminCategorySaveRequest.class), any()))
+                .thenReturn(true);
+
+        mockMvc.perform(put("/admin/categories/3100000000000003001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestBody)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").value(true));
     }
 }

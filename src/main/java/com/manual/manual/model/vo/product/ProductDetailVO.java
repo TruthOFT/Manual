@@ -60,5 +60,7 @@ public class ProductDetailVO {
 
     private List<ProductMaterialVO> materials = new ArrayList<>();
 
+    private List<ProductSkuVO> skus = new ArrayList<>();
+
     private List<ProductReviewVO> reviews = new ArrayList<>();
 }

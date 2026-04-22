@@ -27,29 +27,29 @@ public class AdminCategoryController {
 
     @GetMapping
     public BaseResponse<List<AdminCategoryVO>> listCategories(HttpServletRequest request) {
-        return ResultUtils.success(categoryService.listAdminCategories(request));
+        return ResultUtils.success(categoryService.listAdminCategories(request), "获取分类列表成功");
     }
 
     @GetMapping("/{id}")
     public BaseResponse<AdminCategoryVO> getCategory(@PathVariable Long id, HttpServletRequest request) {
-        return ResultUtils.success(categoryService.getAdminCategory(id, request));
+        return ResultUtils.success(categoryService.getAdminCategory(id, request), "获取分类详情成功");
     }
 
     @PostMapping
     public BaseResponse<Long> createCategory(@RequestBody AdminCategorySaveRequest requestBody,
                                              HttpServletRequest request) {
-        return ResultUtils.success(categoryService.createAdminCategory(requestBody, request));
+        return ResultUtils.success(categoryService.createAdminCategory(requestBody, request), "创建分类成功");
     }
 
     @PutMapping("/{id}")
     public BaseResponse<Boolean> updateCategory(@PathVariable Long id,
                                                 @RequestBody AdminCategorySaveRequest requestBody,
                                                 HttpServletRequest request) {
-        return ResultUtils.success(categoryService.updateAdminCategory(id, requestBody, request));
+        return ResultUtils.success(categoryService.updateAdminCategory(id, requestBody, request), "更新分类成功");
     }
 
     @DeleteMapping("/{id}")
     public BaseResponse<Boolean> deleteCategory(@PathVariable Long id, HttpServletRequest request) {
-        return ResultUtils.success(categoryService.deleteAdminCategory(id, request));
+        return ResultUtils.success(categoryService.deleteAdminCategory(id, request), "删除分类成功");
     }
 }

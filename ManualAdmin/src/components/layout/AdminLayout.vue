@@ -2,19 +2,21 @@
 import {
     AppstoreOutlined,
     BarsOutlined,
+    DownOutlined,
     FileSearchOutlined,
     FolderOpenOutlined,
     HomeOutlined,
+    LogoutOutlined,
     NotificationOutlined,
     SettingOutlined,
     ShoppingCartOutlined,
     TeamOutlined,
 } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
+import { API_CONTEXT_PATH, BASE_URL } from '@/api/request'
 import { useAdminAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -38,7 +40,8 @@ const pageTitle = computed(() => navItems.find((item) => item.path === route.pat
 const displayName = computed(
     () => currentUser.value?.username || currentUser.value?.userAccount || '管理员',
 )
-const displayRole = computed(() => currentUser.value?.userRole || 'admin')
+const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
+const avatarUrl = computed(() => resolveAvatarUrl(currentUser.value?.avatarUrl))
 
 function isActive(path: string) {
     if (path === '/') {
@@ -47,15 +50,39 @@ function isActive(path: string) {
     return route.path.startsWith(path)
 }
 
+function resolveAvatarUrl(url?: string | null) {
+    if (!url) {
+        return undefined
+    }
+    const trimmed = url.trim()
+    if (!trimmed) {
+        return undefined
+    }
+    if (/^(https?:|data:|blob:)/i.test(trimmed)) {
+        return trimmed
+    }
+    const normalized = trimmed.replace(/\\/g, '/')
+    if (normalized.startsWith(API_CONTEXT_PATH + '/upload/')) {
+        return `${BASE_URL}${normalized}`
+    }
+    if (normalized.startsWith('/upload/')) {
+        return `${BASE_URL}${API_CONTEXT_PATH}${normalized}`
+    }
+    return trimmed
+}
+
 async function handleLogout() {
     loggingOut.value = true
     try {
         await authStore.logout()
-        message.success('已退出管理员登录')
-        await router.replace('/login')
+    } catch {
+        authStore.clearCurrentUser()
     } finally {
         loggingOut.value = false
     }
+    await router.replace({
+        name: 'admin-login',
+    })
 }
 </script>
 
@@ -107,19 +134,23 @@ async function handleLogout() {
                         </button>
                     </a-badge>
 
-                    <div class="admin-pill">
-                        <a-avatar :size="40">
-                            {{ displayName.slice(0, 1).toUpperCase() }}
-                        </a-avatar>
-                        <div>
-                            <strong>{{ displayName }}</strong>
-                            <small>{{ displayRole }}</small>
-                        </div>
-                    </div>
+                    <a-dropdown trigger="click" placement="bottomRight">
+                        <button class="admin-avatar-trigger" type="button" :aria-label="`${displayName} 账号菜单`">
+                            <a-avatar :size="42" :src="avatarUrl">
+                                {{ avatarText }}
+                            </a-avatar>
+                            <DownOutlined />
+                        </button>
 
-                    <a-button ghost class="logout-button" :loading="loggingOut" @click="handleLogout">
-                        退出登录
-                    </a-button>
+                        <template #overlay>
+                            <a-menu class="account-menu">
+                                <a-menu-item key="logout" :disabled="loggingOut" @click="handleLogout">
+                                    <LogoutOutlined />
+                                    <span>{{ loggingOut ? '退出中' : '退出登录' }}</span>
+                                </a-menu-item>
+                            </a-menu>
+                        </template>
+                    </a-dropdown>
                 </div>
             </header>
 
@@ -284,27 +315,32 @@ h1 {
     cursor: pointer;
 }
 
-.admin-pill {
+.admin-avatar-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 10px 8px 8px;
-    border-radius: 20px;
+    gap: 8px;
+    min-height: 50px;
+    padding: 4px 10px 4px 4px;
+    border: 0;
+    border-radius: 18px;
     background: var(--surface);
     box-shadow: var(--shadow);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease;
 }
 
-.admin-pill strong {
-    display: block;
+.admin-avatar-trigger:hover,
+.admin-avatar-trigger:focus-visible {
+    transform: translateY(-1px);
     color: var(--text-strong);
 }
 
-.admin-pill small {
-    color: var(--text-muted);
-}
-
-.logout-button {
-    border-radius: 14px;
+.account-menu :deep(.ant-dropdown-menu-item) {
+    min-width: 140px;
+    gap: 8px;
 }
 
 .content-shell {

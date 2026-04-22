@@ -59,7 +59,6 @@ async function handleSave() {
             contactPhone: form.contactPhone,
         })
         applyProfile(nextProfile)
-        message.success('店铺资料已更新')
     } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '保存店铺资料失败'
     } finally {

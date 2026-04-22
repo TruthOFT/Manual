@@ -9,6 +9,7 @@ import {
     onShelfArtisanProduct,
     submitArtisanProductAudit,
 } from '@/api/artisan-center'
+import { resolveUploadUrl } from '@/api/upload'
 import type { ArtisanProductPageData } from '@/types/artisan-center'
 
 const router = useRouter()
@@ -38,6 +39,10 @@ function getStatusText(value: number) {
     return '未知'
 }
 
+function resolveImageUrl(url?: string | null) {
+    return resolveUploadUrl(url)
+}
+
 async function loadProducts() {
     loading.value = true
     errorMessage.value = ''
@@ -54,10 +59,9 @@ async function loadProducts() {
     }
 }
 
-async function runAction(action: () => Promise<boolean>, successText: string) {
+async function runAction(action: () => Promise<boolean>) {
     try {
         await action()
-        message.success(successText)
         await loadProducts()
     } catch (error) {
         message.error(error instanceof Error ? error.message : '操作失败')
@@ -110,7 +114,7 @@ onMounted(() => {
             <a-empty v-if="!products.length" description="当前没有符合条件的商品" />
             <a-card v-for="item in products" :key="item.id" class="artisan-panel product-card" :bordered="false">
                 <div class="product-card-head">
-                    <a-avatar shape="square" :size="68" :src="item.productCover" />
+                    <a-avatar shape="square" :size="68" :src="resolveImageUrl(item.productCover)" />
                     <div class="product-copy">
                         <strong>{{ item.productName }}</strong>
                         <p>{{ item.productSubtitle || '暂无副标题' }}</p>
@@ -141,21 +145,21 @@ onMounted(() => {
                     <a-button
                         v-if="item.auditStatus !== 0"
                         class="manual-ant-btn manual-ant-btn-cream"
-                        @click="runAction(() => submitArtisanProductAudit(item.id), '已提交审核')"
+                        @click="runAction(() => submitArtisanProductAudit(item.id))"
                     >
                         提交审核
                     </a-button>
                     <a-button
                         v-if="item.auditStatus === 1 && item.status !== 1"
                         class="manual-ant-btn manual-ant-btn-primary"
-                        @click="runAction(() => onShelfArtisanProduct(item.id), '商品已上架')"
+                        @click="runAction(() => onShelfArtisanProduct(item.id))"
                     >
                         上架
                     </a-button>
                     <a-button
                         v-if="item.status === 1"
                         class="manual-ant-btn manual-ant-btn-soft"
-                        @click="runAction(() => offShelfArtisanProduct(item.id), '商品已下架')"
+                        @click="runAction(() => offShelfArtisanProduct(item.id))"
                     >
                         下架
                     </a-button>

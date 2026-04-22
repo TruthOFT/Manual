@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal, type FormInstance } from 'ant-design-vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 
@@ -17,7 +17,7 @@ const columns = [
     { title: '层级', dataIndex: 'categoryLevel', key: 'categoryLevel' },
     { title: '父分类', dataIndex: 'parentName', key: 'parentName' },
     { title: '排序', dataIndex: 'sortOrder', key: 'sortOrder' },
-    { title: '状态', dataIndex: 'isEnable', key: 'isEnable' },
+    { title: '首页展示', dataIndex: 'isEnable', key: 'isEnable' },
     { title: '商品数', dataIndex: 'productCount', key: 'productCount' },
     { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime' },
     { title: '操作', key: 'action' },
@@ -27,9 +27,13 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const saving = ref(false)
 const modalVisible = ref(false)
+const detailModalVisible = ref(false)
+const detailLoading = ref(false)
 const isEditMode = ref(false)
 const currentEditId = ref('')
+const currentCategory = ref<AdminCategory | null>(null)
 const categories = ref<AdminCategory[]>([])
+const displaySavingIds = ref(new Set<string>())
 
 const form = reactive({
     parentId: undefined as string | undefined,
@@ -68,11 +72,37 @@ function getLevelColor(level: number) {
 }
 
 function getStatusText(status: number) {
-    return status === 1 ? '启用' : '停用'
+    return status === 1 ? '展示' : '隐藏'
 }
 
 function getStatusColor(status: number) {
     return status === 1 ? 'green' : 'red'
+}
+
+function getParentText(category: AdminCategory) {
+    return category.parentName || (category.categoryLevel === 1 ? '无' : '-')
+}
+
+function setDisplaySaving(id: string, savingStatus: boolean) {
+    const nextIds = new Set(displaySavingIds.value)
+    if (savingStatus) {
+        nextIds.add(id)
+    } else {
+        nextIds.delete(id)
+    }
+    displaySavingIds.value = nextIds
+}
+
+function buildSavePayload(category: AdminCategory, isEnable = category.isEnable): AdminCategorySaveRequest {
+    return {
+        parentId: category.categoryLevel === 2 ? category.parentId || undefined : undefined,
+        categoryName: category.categoryName,
+        categoryIcon: category.categoryIcon || undefined,
+        categoryDesc: category.categoryDesc || undefined,
+        categoryLevel: category.categoryLevel,
+        sortOrder: category.sortOrder ?? 0,
+        isEnable,
+    }
 }
 
 function handleLevelChange(level: number) {
@@ -115,6 +145,39 @@ async function openEditModal(id: string) {
     }
 }
 
+async function openDetailModal(id: string) {
+    detailModalVisible.value = true
+    detailLoading.value = true
+    currentCategory.value = null
+    try {
+        currentCategory.value = await getAdminCategoryDetail(id)
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '加载分类详情失败')
+        detailModalVisible.value = false
+    } finally {
+        detailLoading.value = false
+    }
+}
+
+async function handleDisplayChange(record: AdminCategory, checked: boolean) {
+    const nextStatus = checked ? 1 : 0
+    setDisplaySaving(record.id, true)
+    try {
+        await updateAdminCategory(record.id, buildSavePayload(record, nextStatus))
+        record.isEnable = nextStatus
+        if (currentCategory.value?.id === record.id) {
+            currentCategory.value = {
+                ...currentCategory.value,
+                isEnable: nextStatus,
+            }
+        }
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '更新展示状态失败')
+    } finally {
+        setDisplaySaving(record.id, false)
+    }
+}
+
 async function handleSave() {
     try {
         await formRef.value?.validate()
@@ -134,10 +197,8 @@ async function handleSave() {
         }
         if (isEditMode.value) {
             await updateAdminCategory(currentEditId.value, payload)
-            message.success('分类已更新')
         } else {
             await createAdminCategory(payload)
-            message.success('分类已创建')
         }
         modalVisible.value = false
         resetForm()
@@ -159,7 +220,6 @@ function handleDelete(id: string) {
         async onOk() {
             try {
                 await deleteAdminCategory(id)
-                message.success('分类已删除')
                 await loadCategories()
             } catch (error) {
                 message.error(error instanceof Error ? error.message : '删除分类失败')
@@ -211,9 +271,13 @@ onMounted(() => {
                     {{ record.parentName || '-' }}
                 </template>
                 <template v-else-if="column.key === 'isEnable'">
-                    <a-tag :color="getStatusColor(record.isEnable)">
-                        {{ getStatusText(record.isEnable) }}
-                    </a-tag>
+                    <a-switch
+                        :checked="record.isEnable === 1"
+                        :loading="displaySavingIds.has(record.id)"
+                        checked-children="展示"
+                        un-checked-children="隐藏"
+                        @change="(checked: boolean) => handleDisplayChange(record, checked)"
+                    />
                 </template>
                 <template v-else-if="column.key === 'productCount'">
                     {{ record.productCount ?? 0 }}
@@ -223,6 +287,10 @@ onMounted(() => {
                 </template>
                 <template v-else-if="column.key === 'action'">
                     <a-space>
+                        <a-button size="small" @click="openDetailModal(record.id)">
+                            <EyeOutlined />
+                            查看
+                        </a-button>
                         <a-button size="small" @click="openEditModal(record.id)">
                             <EditOutlined />
                             编辑
@@ -281,10 +349,10 @@ onMounted(() => {
                 <a-input-number v-model:value="form.sortOrder" size="large" :controls="false" class="full-width" />
             </a-form-item>
 
-            <a-form-item label="状态" name="isEnable">
+            <a-form-item label="首页展示" name="isEnable">
                 <a-select v-model:value="form.isEnable" size="large">
-                    <a-select-option :value="1">启用</a-select-option>
-                    <a-select-option :value="0">停用</a-select-option>
+                    <a-select-option :value="1">展示</a-select-option>
+                    <a-select-option :value="0">隐藏</a-select-option>
                 </a-select>
             </a-form-item>
 
@@ -296,6 +364,58 @@ onMounted(() => {
                 <a-textarea v-model:value="form.categoryDesc" :rows="4" />
             </a-form-item>
         </a-form>
+    </a-modal>
+
+    <a-modal
+        v-model:open="detailModalVisible"
+        title="分类详情"
+        :footer="null"
+        width="680px"
+    >
+        <a-skeleton v-if="detailLoading" active :paragraph="{ rows: 8 }" />
+
+        <a-descriptions v-else-if="currentCategory" bordered :column="1" size="middle">
+            <a-descriptions-item label="分类名称">
+                {{ currentCategory.categoryName }}
+            </a-descriptions-item>
+            <a-descriptions-item label="分类层级">
+                <a-tag :color="getLevelColor(currentCategory.categoryLevel)">
+                    {{ getLevelText(currentCategory.categoryLevel) }}
+                </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item label="父分类">
+                {{ getParentText(currentCategory) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="首页展示">
+                <a-tag :color="getStatusColor(currentCategory.isEnable)">
+                    {{ getStatusText(currentCategory.isEnable) }}
+                </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item label="排序值">
+                {{ currentCategory.sortOrder ?? 0 }}
+            </a-descriptions-item>
+            <a-descriptions-item label="商品数">
+                {{ currentCategory.productCount ?? 0 }}
+            </a-descriptions-item>
+            <a-descriptions-item label="分类图标">
+                <a-image
+                    v-if="currentCategory.categoryIcon"
+                    class="category-icon-preview"
+                    :src="currentCategory.categoryIcon"
+                    :alt="currentCategory.categoryName"
+                />
+                <span v-else>-</span>
+            </a-descriptions-item>
+            <a-descriptions-item label="分类描述">
+                {{ currentCategory.categoryDesc || '暂无描述' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+                {{ currentCategory.createTime || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="更新时间">
+                {{ currentCategory.updateTime || '-' }}
+            </a-descriptions-item>
+        </a-descriptions>
     </a-modal>
 </template>
 
@@ -332,6 +452,13 @@ onMounted(() => {
 
 .full-width {
     width: 100%;
+}
+
+.category-icon-preview {
+    max-width: 180px;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
 }
 
 @media (max-width: 900px) {

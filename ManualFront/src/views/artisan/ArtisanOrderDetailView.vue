@@ -44,7 +44,6 @@ async function handleShip() {
     shipping.value = true
     try {
         await shipArtisanOrder(route.params.id, shipForm)
-        message.success('订单已发货')
         await loadDetail()
     } catch (error) {
         message.error(error instanceof Error ? error.message : '发货失败')

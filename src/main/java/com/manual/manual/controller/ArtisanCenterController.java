@@ -38,18 +38,18 @@ public class ArtisanCenterController {
 
     @GetMapping("/dashboard")
     public BaseResponse<ArtisanCenterDashboardVO> getDashboard(HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.getDashboard(request));
+        return ResultUtils.success(artisanCenterService.getDashboard(request), "获取工作台概览成功");
     }
 
     @GetMapping("/profile")
     public BaseResponse<ArtisanCenterProfileVO> getProfile(HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.getProfile(request));
+        return ResultUtils.success(artisanCenterService.getProfile(request), "获取匠人资料成功");
     }
 
     @PutMapping("/profile")
     public BaseResponse<ArtisanCenterProfileVO> updateProfile(@RequestBody ArtisanCenterProfileUpdateRequest updateRequest,
                                                               HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.updateProfile(updateRequest, request));
+        return ResultUtils.success(artisanCenterService.updateProfile(updateRequest, request), "更新匠人资料成功");
     }
 
     @GetMapping("/products")
@@ -57,66 +57,66 @@ public class ArtisanCenterController {
                                                                  @RequestParam(required = false) Integer status,
                                                                  @RequestParam(required = false) String keyword,
                                                                  HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.listProducts(auditStatus, status, keyword, request));
+        return ResultUtils.success(artisanCenterService.listProducts(auditStatus, status, keyword, request), "获取商品列表成功");
     }
 
     @GetMapping("/product-categories")
     public BaseResponse<List<ArtisanCenterCategoryVO>> listProductCategories(HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.listProductCategories(request));
+        return ResultUtils.success(artisanCenterService.listProductCategories(request), "获取商品分类成功");
     }
 
     @PostMapping("/products")
     public BaseResponse<Long> createProduct(@RequestBody ArtisanCenterProductSaveRequest saveRequest,
                                             HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.createProduct(saveRequest, request));
+        return ResultUtils.success(artisanCenterService.createProduct(saveRequest, request), "创建商品成功");
     }
 
     @GetMapping("/products/{productId}")
     public BaseResponse<ArtisanCenterProductDetailVO> getProductDetail(@PathVariable Long productId,
                                                                        HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.getProductDetail(productId, request));
+        return ResultUtils.success(artisanCenterService.getProductDetail(productId, request), "获取商品详情成功");
     }
 
     @PutMapping("/products/{productId}")
     public BaseResponse<Boolean> updateProduct(@PathVariable Long productId,
                                                @RequestBody ArtisanCenterProductSaveRequest saveRequest,
                                                HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.updateProduct(productId, saveRequest, request));
+        return ResultUtils.success(artisanCenterService.updateProduct(productId, saveRequest, request), "更新商品成功");
     }
 
     @PostMapping("/products/{productId}/submit-audit")
     public BaseResponse<Boolean> submitAudit(@PathVariable Long productId, HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.submitAudit(productId, request));
+        return ResultUtils.success(artisanCenterService.submitAudit(productId, request), "提交审核成功");
     }
 
     @PostMapping("/products/{productId}/on-shelf")
     public BaseResponse<Boolean> onShelf(@PathVariable Long productId, HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.onShelf(productId, request));
+        return ResultUtils.success(artisanCenterService.onShelf(productId, request), "上架成功");
     }
 
     @PostMapping("/products/{productId}/off-shelf")
     public BaseResponse<Boolean> offShelf(@PathVariable Long productId, HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.offShelf(productId, request));
+        return ResultUtils.success(artisanCenterService.offShelf(productId, request), "下架成功");
     }
 
     @GetMapping("/orders")
     public BaseResponse<List<ArtisanCenterOrderListItemVO>> listOrders(@RequestParam(required = false) Integer orderStatus,
                                                                        @RequestParam(required = false) String keyword,
                                                                        HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.listOrders(orderStatus, keyword, request));
+        return ResultUtils.success(artisanCenterService.listOrders(orderStatus, keyword, request), "获取订单列表成功");
     }
 
     @GetMapping("/orders/{orderItemId}")
     public BaseResponse<ArtisanCenterOrderDetailVO> getOrderDetail(@PathVariable Long orderItemId,
                                                                    HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.getOrderDetail(orderItemId, request));
+        return ResultUtils.success(artisanCenterService.getOrderDetail(orderItemId, request), "获取订单详情成功");
     }
 
     @PostMapping("/orders/{orderItemId}/ship")
     public BaseResponse<Boolean> shipOrder(@PathVariable Long orderItemId,
                                            @RequestBody ArtisanCenterOrderShipRequest shipRequest,
                                            HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.shipOrder(orderItemId, shipRequest, request));
+        return ResultUtils.success(artisanCenterService.shipOrder(orderItemId, shipRequest, request), "发货成功");
     }
 
     @GetMapping("/custom-requirements")
@@ -125,27 +125,27 @@ public class ArtisanCenterController {
             @RequestParam(required = false) String keyword,
             HttpServletRequest request
     ) {
-        return ResultUtils.success(artisanCenterService.listCustomRequirements(confirmStatus, keyword, request));
+        return ResultUtils.success(artisanCenterService.listCustomRequirements(confirmStatus, keyword, request), "获取定制需求列表成功");
     }
 
     @GetMapping("/custom-requirements/{id}")
     public BaseResponse<ArtisanCenterCustomRequirementDetailVO> getCustomRequirementDetail(@PathVariable Long id,
                                                                                             HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.getCustomRequirementDetail(id, request));
+        return ResultUtils.success(artisanCenterService.getCustomRequirementDetail(id, request), "获取定制需求详情成功");
     }
 
     @PostMapping("/custom-requirements/{id}/accept")
     public BaseResponse<Boolean> acceptCustomRequirement(@PathVariable Long id,
                                                          @RequestBody(required = false) ArtisanCenterCustomRequirementActionRequest actionRequest,
                                                          HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.acceptCustomRequirement(id, actionRequest, request));
+        return ResultUtils.success(artisanCenterService.acceptCustomRequirement(id, actionRequest, request), "接单成功");
     }
 
     @PostMapping("/custom-requirements/{id}/reject")
     public BaseResponse<Boolean> rejectCustomRequirement(@PathVariable Long id,
                                                          @RequestBody(required = false) ArtisanCenterCustomRequirementActionRequest actionRequest,
                                                          HttpServletRequest request) {
-        return ResultUtils.success(artisanCenterService.rejectCustomRequirement(id, actionRequest, request));
+        return ResultUtils.success(artisanCenterService.rejectCustomRequirement(id, actionRequest, request), "拒单成功");
     }
 
     @PostMapping("/custom-requirements/{id}/processing")
@@ -154,7 +154,7 @@ public class ArtisanCenterController {
             @RequestBody(required = false) ArtisanCenterCustomRequirementActionRequest actionRequest,
             HttpServletRequest request
     ) {
-        return ResultUtils.success(artisanCenterService.markCustomRequirementProcessing(id, actionRequest, request));
+        return ResultUtils.success(artisanCenterService.markCustomRequirementProcessing(id, actionRequest, request), "标记处理中成功");
     }
 
     @PostMapping("/custom-requirements/{id}/complete")
@@ -163,6 +163,6 @@ public class ArtisanCenterController {
             @RequestBody(required = false) ArtisanCenterCustomRequirementActionRequest actionRequest,
             HttpServletRequest request
     ) {
-        return ResultUtils.success(artisanCenterService.markCustomRequirementComplete(id, actionRequest, request));
+        return ResultUtils.success(artisanCenterService.markCustomRequirementComplete(id, actionRequest, request), "标记完成成功");
     }
 }

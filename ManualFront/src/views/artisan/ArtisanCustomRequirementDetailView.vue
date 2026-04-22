@@ -39,7 +39,7 @@ async function loadDetail() {
     }
 }
 
-async function runAction(action: (id: string, data: { confirmRemark?: string }) => Promise<boolean>, successText: string) {
+async function runAction(action: (id: string, data: { confirmRemark?: string }) => Promise<boolean>) {
     if (typeof route.params.id !== 'string') {
         return
     }
@@ -48,7 +48,6 @@ async function runAction(action: (id: string, data: { confirmRemark?: string }) 
         await action(route.params.id, {
             confirmRemark: remark.value || undefined,
         })
-        message.success(successText)
         await loadDetail()
     } catch (error) {
         message.error(error instanceof Error ? error.message : '操作失败')
@@ -100,7 +99,7 @@ onMounted(() => {
                         v-if="detail.confirmStatus === 0"
                         class="manual-ant-btn manual-ant-btn-primary"
                         :loading="acting"
-                        @click="runAction(acceptArtisanCustomRequirement, '已接受定制需求')"
+                        @click="runAction(acceptArtisanCustomRequirement)"
                     >
                         接单
                     </a-button>
@@ -108,7 +107,7 @@ onMounted(() => {
                         v-if="detail.confirmStatus === 0"
                         class="manual-ant-btn manual-ant-btn-soft"
                         :loading="acting"
-                        @click="runAction(rejectArtisanCustomRequirement, '已拒绝定制需求')"
+                        @click="runAction(rejectArtisanCustomRequirement)"
                     >
                         拒绝
                     </a-button>
@@ -116,7 +115,7 @@ onMounted(() => {
                         v-if="detail.confirmStatus === 1"
                         class="manual-ant-btn manual-ant-btn-cream"
                         :loading="acting"
-                        @click="runAction(processingArtisanCustomRequirement, '已标记为处理中')"
+                        @click="runAction(processingArtisanCustomRequirement)"
                     >
                         标记处理中
                     </a-button>
@@ -124,7 +123,7 @@ onMounted(() => {
                         v-if="detail.confirmStatus === 1 || detail.confirmStatus === 3"
                         class="manual-ant-btn manual-ant-btn-primary"
                         :loading="acting"
-                        @click="runAction(completeArtisanCustomRequirement, '已标记为完成')"
+                        @click="runAction(completeArtisanCustomRequirement)"
                     >
                         标记完成
                     </a-button>

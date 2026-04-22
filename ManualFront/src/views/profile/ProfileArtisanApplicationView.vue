@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { DeleteOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { message, type UploadProps } from 'ant-design-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { getArtisanApplication, submitArtisanApplication } from '@/api/artisan-application'
-import { uploadFile } from '@/api/upload'
+import { resolveUploadUrl, uploadFile } from '@/api/upload'
 import { rechargeUser } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import type {
@@ -19,11 +19,9 @@ const userStore = useUserStore()
 const loading = ref(false)
 const submitting = ref(false)
 const recharging = ref(false)
-const uploadingAvatar = ref(false)
-const uploadingCover = ref(false)
-const uploadingQualification = ref(false)
 const application = ref<ArtisanApplication | null>(null)
 const rechargeAmount = ref<number>(1000)
+const pendingUploadFiles = new Map<string, File>()
 
 const form = reactive<ArtisanApplicationSubmitRequest>({
     artisanName: '',
@@ -47,10 +45,17 @@ const canSubmit = computed(() => isNormalUser.value && auditStatus.value !== 0)
 const isApproved = computed(
     () => currentUser.value?.userRole === 'artisan' || auditStatus.value === 1,
 )
+const roleLabel = computed(() => {
+    const role = currentUser.value?.userRole
+    if (role === 'user') return '普通账户'
+    if (role === 'admin') return '管理员'
+    if (role === 'artisan') return '匠人'
+    return '-'
+})
 const depositAmount = computed(() => Number(application.value?.depositAmount ?? 1000))
 const disableReason = computed(() => {
     if (currentUser.value?.userRole === 'artisan') {
-        return '当前账号已是匠人，无需重复申请。'
+        return '当前账号已经是匠人，无需重复申请。'
     }
     if (!isNormalUser.value) {
         return '仅普通用户可以提交匠人申请。'
@@ -61,7 +66,56 @@ const disableReason = computed(() => {
     return ''
 })
 
+function isTempFileUrl(url?: string | null) {
+    return Boolean(url && url.startsWith('blob:'))
+}
+
+function createTempFileUrl(file: File) {
+    const tempUrl = URL.createObjectURL(file)
+    pendingUploadFiles.set(tempUrl, file)
+    return tempUrl
+}
+
+function releaseTempFileUrl(url?: string | null) {
+    if (!isTempFileUrl(url) || !url) {
+        return
+    }
+    pendingUploadFiles.delete(url)
+    URL.revokeObjectURL(url)
+}
+
+function clearAllTempFileUrls() {
+    for (const tempUrl of pendingUploadFiles.keys()) {
+        URL.revokeObjectURL(tempUrl)
+    }
+    pendingUploadFiles.clear()
+}
+
+function setTempSingleImage(field: 'artisanAvatar' | 'coverUrl', file: File) {
+    releaseTempFileUrl(form[field])
+    form[field] = createTempFileUrl(file)
+}
+
+async function ensureUploadedUserFile(url: string) {
+    if (!isTempFileUrl(url)) {
+        return url
+    }
+    const file = pendingUploadFiles.get(url)
+    if (!file) {
+        throw new Error('暂存图片不存在，请重新选择后提交')
+    }
+    const uploadedUrl = await uploadFile('user', file)
+    pendingUploadFiles.delete(url)
+    URL.revokeObjectURL(url)
+    return uploadedUrl
+}
+
+function resolveImageUrl(url?: string | null) {
+    return resolveUploadUrl(url)
+}
+
 function applyApplication(detail: ArtisanApplication) {
+    clearAllTempFileUrls()
     application.value = detail
     form.artisanName = detail.artisanName || ''
     form.shopName = detail.shopName || ''
@@ -94,7 +148,6 @@ async function handleRecharge() {
     try {
         const user = await rechargeUser({ amount: rechargeAmount.value })
         userStore.setCurrentUser(user)
-        message.success('余额已充值，可以继续提交匠人申请')
     } catch (error) {
         message.error(error instanceof Error ? error.message : '充值失败')
     } finally {
@@ -111,13 +164,18 @@ async function handleSubmit() {
     }
     submitting.value = true
     try {
-        const result = await submitArtisanApplication({
+        const payload: ArtisanApplicationSubmitRequest = {
             ...form,
             qualificationImages: [...form.qualificationImages],
-        })
+        }
+        payload.artisanAvatar = await ensureUploadedUserFile(payload.artisanAvatar)
+        payload.coverUrl = await ensureUploadedUserFile(payload.coverUrl)
+        payload.qualificationImages = await Promise.all(
+            payload.qualificationImages.map((item) => ensureUploadedUserFile(item)),
+        )
+        const result = await submitArtisanApplication(payload)
         applyApplication(result)
         await userStore.fetchCurrentUser()
-        message.success('匠人申请已提交，请等待管理员审核')
     } catch (error) {
         message.error(error instanceof Error ? error.message : '提交匠人申请失败')
     } finally {
@@ -125,90 +183,51 @@ async function handleSubmit() {
     }
 }
 
-async function uploadUserAsset(
-    file: File,
-    onSuccess: (url: string) => void,
-    mode: 'avatar' | 'cover' | 'qualification',
-) {
-    if (mode === 'avatar') {
-        uploadingAvatar.value = true
-    } else if (mode === 'cover') {
-        uploadingCover.value = true
-    } else {
-        uploadingQualification.value = true
-    }
-    try {
-        const url = await uploadFile('user', file)
-        onSuccess(url)
-        message.success('图片上传成功')
-    } catch (error) {
-        message.error(error instanceof Error ? error.message : '图片上传失败')
-    } finally {
-        if (mode === 'avatar') {
-            uploadingAvatar.value = false
-        } else if (mode === 'cover') {
-            uploadingCover.value = false
-        } else {
-            uploadingQualification.value = false
-        }
-    }
+const beforeUploadAvatar: UploadProps['beforeUpload'] = (file) => {
+    setTempSingleImage('artisanAvatar', file as File)
     return false
 }
 
-const beforeUploadAvatar: UploadProps['beforeUpload'] = async (file) => {
-    return uploadUserAsset(file as File, (url) => {
-        form.artisanAvatar = url
-    }, 'avatar')
+const beforeUploadCover: UploadProps['beforeUpload'] = (file) => {
+    setTempSingleImage('coverUrl', file as File)
+    return false
 }
 
-const beforeUploadCover: UploadProps['beforeUpload'] = async (file) => {
-    return uploadUserAsset(file as File, (url) => {
-        form.coverUrl = url
-    }, 'cover')
-}
-
-const beforeUploadQualification: UploadProps['beforeUpload'] = async (file) => {
-    return uploadUserAsset(file as File, (url) => {
-        form.qualificationImages.push(url)
-    }, 'qualification')
+const beforeUploadQualification: UploadProps['beforeUpload'] = (file) => {
+    form.qualificationImages.push(createTempFileUrl(file as File))
+    return false
 }
 
 function removeQualification(index: number) {
+    const item = form.qualificationImages[index]
+    releaseTempFileUrl(item)
     form.qualificationImages.splice(index, 1)
 }
 
 function getAuditStatusText(status: number | null) {
-    if (status === 1) {
-        return '审核通过'
-    }
-    if (status === 2) {
-        return '审核驳回'
-    }
-    if (status === 0) {
-        return '待审核'
-    }
+    if (status === 1) return '审核通过'
+    if (status === 2) return '审核驳回'
+    if (status === 0) return '待审核'
     return '未提交'
 }
 
 function getAuditStatusColor(status: number | null) {
-    if (status === 1) {
-        return 'green'
-    }
-    if (status === 2) {
-        return 'red'
-    }
-    if (status === 0) {
-        return 'gold'
-    }
+    if (status === 1) return 'green'
+    if (status === 2) return 'red'
+    if (status === 0) return 'gold'
     return 'default'
 }
 
 function formatBalance(value: number | string | null | undefined) {
-    return `￥${Number(value || 0).toFixed(2)}`
+    return `¥${Number(value || 0).toFixed(2)}`
 }
 
 onMounted(() => {
     void loadApplication()
+})
+
+onBeforeUnmount(() => {
+    clearAllTempFileUrls()
 })
 </script>
 
@@ -225,7 +244,7 @@ onMounted(() => {
                 <a-card class="stat-card" :bordered="false">
                     <span>当前余额</span>
                     <strong>{{ formatBalance(currentUser?.balance) }}</strong>
-                    <p>余额不足时可先进行模拟充值。</p>
+                    <p>余额不足时可先进行充值。</p>
                 </a-card>
                 <a-card class="stat-card" :bordered="false">
                     <span>保证金</span>
@@ -252,7 +271,7 @@ onMounted(() => {
                     <div class="status-row">
                         <span>当前角色</span>
                         <a-tag :color="isApproved ? 'green' : 'blue'">
-                            {{ currentUser?.userRole || '-' }}
+                            {{ roleLabel }}
                         </a-tag>
                     </div>
                     <div class="status-row">
@@ -291,7 +310,7 @@ onMounted(() => {
                         :loading="recharging"
                         @click="handleRecharge"
                     >
-                        模拟充值
+                        充值
                     </a-button>
                 </div>
 
@@ -354,21 +373,21 @@ onMounted(() => {
                 <div class="upload-grid">
                     <div class="upload-panel">
                         <p>匠人头像</p>
-                        <a-image v-if="form.artisanAvatar" :src="form.artisanAvatar" :width="120" />
+                        <a-image v-if="form.artisanAvatar" :src="resolveImageUrl(form.artisanAvatar)" :width="120" />
                         <a-upload :show-upload-list="false" accept="image/*" :before-upload="beforeUploadAvatar">
-                            <a-button :disabled="!canSubmit" :loading="uploadingAvatar">
+                            <a-button :disabled="!canSubmit">
                                 <UploadOutlined />
-                                上传头像
+                                选择头像
                             </a-button>
                         </a-upload>
                     </div>
                     <div class="upload-panel">
                         <p>店铺封面</p>
-                        <a-image v-if="form.coverUrl" :src="form.coverUrl" :width="180" />
+                        <a-image v-if="form.coverUrl" :src="resolveImageUrl(form.coverUrl)" :width="180" />
                         <a-upload :show-upload-list="false" accept="image/*" :before-upload="beforeUploadCover">
-                            <a-button :disabled="!canSubmit" :loading="uploadingCover">
+                            <a-button :disabled="!canSubmit">
                                 <UploadOutlined />
-                                上传封面
+                                选择封面
                             </a-button>
                         </a-upload>
                     </div>
@@ -382,7 +401,7 @@ onMounted(() => {
                             accept="image/*"
                             :before-upload="beforeUploadQualification"
                         >
-                            <a-button :disabled="!canSubmit" :loading="uploadingQualification">
+                            <a-button :disabled="!canSubmit">
                                 <PlusOutlined />
                                 新增资质图
                             </a-button>
@@ -394,7 +413,7 @@ onMounted(() => {
                             :key="`${item}-${index}`"
                             class="qualification-item"
                         >
-                            <a-image :src="item" :preview="true" :width="132" />
+                            <a-image :src="resolveImageUrl(item)" :preview="true" :width="132" />
                             <a-button danger type="link" :disabled="!canSubmit" @click="removeQualification(index)">
                                 <DeleteOutlined />
                                 删除

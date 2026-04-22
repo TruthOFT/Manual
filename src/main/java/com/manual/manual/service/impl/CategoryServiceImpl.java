@@ -124,7 +124,11 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         category.setCategoryDesc(trim(requestBody.getCategoryDesc()));
         category.setCategoryLevel(categoryLevel);
         category.setSortOrder(requestBody.getSortOrder() == null ? 0 : requestBody.getSortOrder());
-        category.setIsEnable(requestBody.getIsEnable() == null ? 1 : requestBody.getIsEnable());
+        Integer isEnable = requestBody.getIsEnable() == null ? 1 : requestBody.getIsEnable();
+        if (isEnable != 0 && isEnable != 1) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Category display status is invalid");
+        }
+        category.setIsEnable(isEnable);
     }
 
     private void validateCategoryNameUnique(Long currentId, Long parentId, String categoryName) {

@@ -22,11 +22,11 @@ public class ArtisanController {
 
     @GetMapping
     public BaseResponse<List<ArtisanListItemVO>> listArtisans() {
-        return ResultUtils.success(artisanService.listArtisans());
+        return ResultUtils.success(artisanService.listArtisans(), "获取匠人列表成功");
     }
 
     @GetMapping("/{artisanId}")
     public BaseResponse<ArtisanDetailVO> getArtisanDetail(@PathVariable Long artisanId) {
-        return ResultUtils.success(artisanService.getArtisanDetail(artisanId));
+        return ResultUtils.success(artisanService.getArtisanDetail(artisanId), "获取匠人详情成功");
     }
 }

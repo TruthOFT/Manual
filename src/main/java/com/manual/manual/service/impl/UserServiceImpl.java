@@ -235,15 +235,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public LoginUserVO rechargeBalance(UserRechargeRequest rechargeRequest, HttpServletRequest request) {
         if (rechargeRequest == null || rechargeRequest.getAmount() == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Recharge amount is required");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请输入充值金额");
         }
         if (rechargeRequest.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Recharge amount must be greater than 0");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "充值金额必须大于 0");
         }
         User loginUser = getLoginUser(request);
         loginUser.setBalance(defaultAmount(loginUser.getBalance()).add(rechargeRequest.getAmount()));
         if (!this.updateById(loginUser)) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Recharge failed");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "充值失败");
         }
         return getLoginUserVO(this.getById(loginUser.getId()));
     }

@@ -16,7 +16,9 @@ export function registerUser(data: UserRegisterRequest) {
 }
 
 export function getCurrentUser() {
-    return request<LoginUser | null>('/user/get/login')
+    return request<LoginUser | null>('/user/get/login', {
+        showSuccessMessage: false,
+    })
 }
 
 export function logoutUser() {

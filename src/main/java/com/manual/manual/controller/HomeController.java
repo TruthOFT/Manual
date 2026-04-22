@@ -18,6 +18,6 @@ public class HomeController {
 
     @GetMapping
     public BaseResponse<HomePageVO> getHomePage() {
-        return ResultUtils.success(homeService.getHomePage());
+        return ResultUtils.success(homeService.getHomePage(), "获取首页数据成功");
     }
 }

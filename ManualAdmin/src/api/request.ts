@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
+import { message } from 'ant-design-vue'
 
 type BaseResponse<T> = {
     code: number
@@ -6,11 +7,15 @@ type BaseResponse<T> = {
     message: string
 }
 
+type RequestOptions = AxiosRequestConfig & {
+    showSuccessMessage?: boolean
+}
+
 export const BASE_URL = 'http://localhost:8080'
-const CONTEXT_PATH = '/api'
+export const API_CONTEXT_PATH = '/api'
 
 const myAxios = axios.create({
-    baseURL: BASE_URL + CONTEXT_PATH,
+    baseURL: BASE_URL + API_CONTEXT_PATH,
     timeout: 60000,
     withCredentials: true,
 })
@@ -22,11 +27,11 @@ myAxios.interceptors.response.use(
         if (result?.message) {
             return Promise.reject(new Error(result.message))
         }
-        return Promise.reject(new Error(error.message || '请求失败'))
+        return Promise.reject(new Error(error.message || 'Request failed'))
     },
 )
 
-export function request<T>(url: string, options: AxiosRequestConfig = {}): Promise<T> {
+export function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
     return myAxios
         .request<BaseResponse<T>>({
             url,
@@ -34,13 +39,18 @@ export function request<T>(url: string, options: AxiosRequestConfig = {}): Promi
         })
         .then((response) => {
             if (response.data.code !== 0) {
-                let fallbackMessage = '请求失败'
+                let fallbackMessage = 'Request failed'
                 if (response.data.code === 40100) {
-                    fallbackMessage = '请先登录管理员账号'
+                    fallbackMessage = 'Please log in as admin first'
                 } else if (response.data.code === 40101) {
-                    fallbackMessage = '当前账号没有管理员权限'
+                    fallbackMessage = 'Current account has no admin permission'
                 }
                 throw new Error(response.data.message || fallbackMessage)
+            }
+            const method = String(options.method ?? 'get').toLowerCase()
+            const shouldShowSuccessMessage = options.showSuccessMessage ?? method !== 'get'
+            if (shouldShowSuccessMessage && response.data.message) {
+                message.success(response.data.message)
             }
             return response.data.data
         })

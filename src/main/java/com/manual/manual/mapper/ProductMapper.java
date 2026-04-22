@@ -6,6 +6,7 @@ import com.manual.manual.model.vo.product.ProductImageVO;
 import com.manual.manual.model.vo.product.ProductListItemVO;
 import com.manual.manual.model.vo.product.ProductMaterialVO;
 import com.manual.manual.model.vo.product.ProductReviewVO;
+import com.manual.manual.model.vo.product.ProductSkuVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -184,6 +185,28 @@ public interface ProductMapper {
             order by sortOrder asc, id asc
             """)
     List<ProductMaterialVO> selectProductMaterials(@Param("productId") Long productId);
+
+    @Select("""
+            select
+                id,
+                skuCode,
+                skuName,
+                skuCover,
+                specText,
+                materialType,
+                weight,
+                price,
+                originalPrice,
+                stock,
+                lockedStock,
+                status
+            from product_sku
+            where productId = #{productId}
+              and isDelete = 0
+              and status = 1
+            order by id asc
+            """)
+    List<ProductSkuVO> selectProductSkus(@Param("productId") Long productId);
 
     @Select("""
             select

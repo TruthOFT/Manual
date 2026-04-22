@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { message } from 'ant-design-vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { rechargeUser } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const loginUser = computed(() => userStore.currentUser)
+const rechargeAmount = ref<number>(100)
+const recharging = ref(false)
 
 function handleEditProfile() {
     message.info('后续可在这里接入资料编辑表单。')
@@ -23,11 +26,27 @@ async function handleLogout() {
     await router.push('/')
 }
 
+async function handleRecharge() {
+    if (!rechargeAmount.value || rechargeAmount.value <= 0) {
+        message.warning('请输入大于 0 的充值金额')
+        return
+    }
+    recharging.value = true
+    try {
+        const nextUser = await rechargeUser({ amount: rechargeAmount.value })
+        userStore.setCurrentUser(nextUser)
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '充值失败')
+    } finally {
+        recharging.value = false
+    }
+}
+
 function formatGender(gender: number | null | undefined) {
     if (gender === 1) {
         return '男'
     }
-    if (gender === 0) {
+    if (gender === 2) {
         return '女'
     }
     return '未填写'
@@ -63,10 +82,7 @@ function getUserRoleTag(role: string | null | undefined) {
 }
 
 function formatBalance(balance: number | string | null | undefined) {
-    if (balance === null || balance === undefined || balance === '') {
-        return 'CNY 0.00'
-    }
-    return `CNY ${balance}`
+    return `CNY ${Number(balance || 0).toFixed(2)}`
 }
 
 function formatDateTime(value: string | number | null | undefined) {
@@ -82,6 +98,27 @@ function formatDateTime(value: string | number | null | undefined) {
 
 <template>
     <a-card class="profile-panel settings-panel" :bordered="false" title="账号设置">
+        <a-card class="balance-card" :bordered="false">
+            <div class="balance-copy">
+                <span>账户余额</span>
+                <strong>{{ formatBalance(loginUser?.balance) }}</strong>
+                <p>余额可用于支付待支付订单。</p>
+            </div>
+            <div class="recharge-box">
+                <a-input-number
+                    v-model:value="rechargeAmount"
+                    size="large"
+                    :min="1"
+                    :precision="2"
+                    :controls="false"
+                    class="recharge-input"
+                />
+                <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" :loading="recharging" @click="handleRecharge">
+                    充值
+                </a-button>
+            </div>
+        </a-card>
+
         <a-descriptions :column="{ xs: 1, sm: 1, md: 2 }" bordered>
             <a-descriptions-item label="用户 ID">
                 {{ loginUser?.id ?? '暂无' }}
@@ -109,9 +146,6 @@ function formatDateTime(value: string | number | null | undefined) {
             <a-descriptions-item label="账号状态">
                 {{ formatUserStatus(loginUser?.userStatus) }}
             </a-descriptions-item>
-            <a-descriptions-item label="账户余额">
-                {{ formatBalance(loginUser?.balance) }}
-            </a-descriptions-item>
             <a-descriptions-item label="最近登录">
                 {{ formatDateTime(loginUser?.lastLoginTime) }}
             </a-descriptions-item>
@@ -121,7 +155,7 @@ function formatDateTime(value: string | number | null | undefined) {
             <a-descriptions-item label="更新时间">
                 {{ formatDateTime(loginUser?.updateTime) }}
             </a-descriptions-item>
-            <a-descriptions-item label="头像地址" :span="2">
+            <a-descriptions-item label="头像地址">
                 <div class="settings-avatar-row">
                     <a-avatar :size="56" :src="loginUser?.avatarUrl">
                         {{ (loginUser?.username || loginUser?.userAccount || 'U').slice(0, 1) }}
@@ -153,9 +187,46 @@ function formatDateTime(value: string | number | null | undefined) {
     gap: 24px;
 }
 
+.balance-card {
+    border-radius: 16px;
+    background: rgba(255, 247, 238, 0.92);
+}
+
+.balance-card :deep(.ant-card-body) {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: center;
+}
+
+.balance-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.balance-copy span,
+.balance-copy p {
+    color: var(--text-muted);
+}
+
+.balance-copy strong {
+    color: var(--coral-deep);
+    font-size: 1.8rem;
+}
+
+.recharge-box {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.recharge-input {
+    width: 180px;
+}
+
 .settings-panel :deep(.ant-descriptions-view) {
     overflow: hidden;
-    border-radius: 22px;
+    border-radius: 16px;
 }
 
 .settings-panel :deep(.ant-descriptions-row > th) {
@@ -186,11 +257,20 @@ function formatDateTime(value: string | number | null | undefined) {
 }
 
 @media (max-width: 760px) {
+    .balance-card :deep(.ant-card-body),
+    .recharge-box {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .recharge-box,
+    .recharge-input,
     .settings-actions {
         width: 100%;
     }
 
-    .settings-actions :deep(.ant-btn) {
+    .settings-actions :deep(.ant-btn),
+    .recharge-box :deep(.ant-btn) {
         width: 100%;
     }
 

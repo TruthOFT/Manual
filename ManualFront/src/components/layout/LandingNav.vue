@@ -37,7 +37,6 @@ async function handleMenuClick({ key }: { key: string }) {
             <span class="mark">hm</span>
             <span class="brand-copy">
                 <strong>手作创意商城</strong>
-                <small>前台展示与个人中心</small>
             </span>
         </RouterLink>
 

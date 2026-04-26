@@ -820,6 +820,13 @@ h3 {
 
 .similar-card {
     cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.similar-card:hover {
+    background: rgba(255, 253, 248, 0.95);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(126, 69, 47, 0.08);
 }
 
 .similar-card :deep(.ant-card-cover img) {

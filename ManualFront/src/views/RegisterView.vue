@@ -73,24 +73,24 @@ async function handleSubmit() {
 
         <section class="auth-shell">
             <a-card class="story-card" :bordered="false">
-                <p class="eyebrow">创建门店账号</p>
-                <h1>把你的商品、门店节奏与门店故事放进一个清晰统一的系统中。</h1>
+                <p class="eyebrow">加入我们</p>
+                <h1>成为手作社区的一员，发现与分享独一无二的匠心故事。</h1>
                 <p class="lead">
-                    当前注册只保留后端已经支持的最小字段，后续继续接业务接口时不需要再重做这一页。
+                    创建一个账号，开启个性化体验，我们将为您推荐符合您品味的精选作品与独家定制服务。
                 </p>
 
                 <div class="feature-grid">
                     <a-card class="mini-card" :bordered="false">
-                        <strong>精选上新</strong>
-                        <p>把主推商品、节日礼盒和服务系列统一整理到一个流程里。</p>
+                        <strong>专属定制</strong>
+                        <p>与独立匠人直接沟通，打造专属于您的个性化作品。</p>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <strong>门店节奏</strong>
-                        <p>通过首页快速查看销量变化、主推分类和订单动态。</p>
+                        <strong>灵感速递</strong>
+                        <p>第一时间获取最新创作、节日礼盒及上新通知。</p>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <strong>门店协作</strong>
-                        <p>把手作人、工作室与品牌展示统一在同一套门店语言里。</p>
+                        <strong>品味推荐</strong>
+                        <p>智能算法为您呈现更契合个人审美的创意手作。</p>
                     </a-card>
                 </div>
             </a-card>
@@ -98,7 +98,7 @@ async function handleSubmit() {
             <a-card class="form-card" :bordered="false">
                 <p class="card-label">开始注册</p>
                 <h2>创建账号</h2>
-                <p class="card-copy">先完成基础注册，后面接入真实业务接口时就不需要再重做页面结构。</p>
+                <p class="card-copy">填写基础信息完成注册，立即开启您的专属手作美学之旅。</p>
 
                 <a-alert v-if="errorMessage" class="alert" type="error" :message="errorMessage" show-icon />
 

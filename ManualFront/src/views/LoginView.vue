@@ -56,7 +56,7 @@ async function handleSubmit() {
         userStore.setCurrentUser(loginUserInfo)
         const redirect = typeof route.query.redirect === 'string' && route.query.redirect.length > 0
             ? route.query.redirect
-            : '/profile'
+            : '/'
         await router.push(redirect)
     } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '登录失败，请稍后重试。'
@@ -73,30 +73,30 @@ async function handleSubmit() {
 
         <section class="auth-shell">
             <a-card class="story-card" :bordered="false">
-                <p class="eyebrow">门店账号登录</p>
-                <h1>把门店、商品、订单和门店运营都收进同一个有温度的系统里。</h1>
+                <p class="eyebrow">会员登录</p>
+                <h1>开启您的手作美学之旅，探索更多专属灵感。</h1>
                 <p class="lead">
-                    登录后即可继续管理精选商品、门店数据和运营状态，当前页面结构也已经和后续后端接口保持对接方向一致。
+                    登录后，我们将为您提供量身定制的精选推荐，让您第一时间发现心仪的匠心之作与创意单品。
                 </p>
 
                 <div class="feature-grid">
                     <a-card class="mini-card" :bordered="false">
-                        <span>今日上新</span>
+                        <span>今日精选</span>
                         <strong>12 款</strong>
                         <small>陶艺、香氛与木作系列同步更新。</small>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <span>复购率</span>
-                        <strong>64%</strong>
-                        <small>礼盒组合与布艺单品持续稳定成交。</small>
+                        <span>专属推荐</span>
+                        <strong>100%</strong>
+                        <small>基于您的喜好，量身推荐契合灵魂的好物。</small>
                     </a-card>
                 </div>
             </a-card>
 
             <a-card class="form-card" :bordered="false">
                 <p class="card-label">欢迎回来</p>
-                <h2>登录门店系统</h2>
-                <p class="card-copy">使用你的账号继续进入手工创意门店管理系统。</p>
+                <h2>登录账号</h2>
+                <p class="card-copy">使用您的账号登录，继续探索手作创意之旅。</p>
 
                 <a-alert v-if="successMessage" class="alert" type="success" :message="successMessage" show-icon />
                 <a-alert v-if="errorMessage" class="alert" type="error" :message="errorMessage" show-icon />

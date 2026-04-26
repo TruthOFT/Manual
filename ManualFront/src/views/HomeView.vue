@@ -81,9 +81,9 @@ watch(() => userStore.currentUser?.id, () => {
             <div class="hero-grid">
                 <div class="hero-copy">
                     <p class="eyebrow">手作品牌展示、精选作品、门店商品</p>
-                    <h1>把手工门店做成既有品牌温度，也方便用户浏览作品的前台站点。</h1>
+                    <h1>探索匠心手作，感受独具温度的品牌美学。</h1>
                     <p class="lead">
-                        首页保留公开展示所需的导购信息，作品和分类都来自真实数据，用户登录后会在今日门店精选里看到为自己计算的推荐作品。
+                        我们致力于为您呈现精选的原创手工作品。浏览多元分类，发现匠心独运的设计；登录后，更可获取为您量身定制的专属推荐，开启个性化美学之旅。
                     </p>
 
                     <a-space size="middle" wrap>
@@ -109,7 +109,7 @@ watch(() => userStore.currentUser?.id, () => {
                     </template>
 
                     <template #title>
-                        <span class="card-title">今日门店精选</span>
+                        <span class="card-title">今日门店推荐</span>
                     </template>
 
                     <a-skeleton v-if="loading || recommendationLoading" active :paragraph="{ rows: 4 }" />
@@ -203,6 +203,74 @@ watch(() => userStore.currentUser?.id, () => {
             </a-row>
             <a-empty v-else description="暂无作品数据" />
         </section>
+
+        <section class="shell section features-section">
+            <div class="section-head text-center">
+                <p class="eyebrow">我们的优势</p>
+                <h2>为什么选择我们</h2>
+            </div>
+            <a-row :gutter="[32, 32]" class="features-grid">
+                <a-col :xs="24" :md="8">
+                    <div class="feature-item">
+                        <div class="feature-icon">✨</div>
+                        <h3>纯手工制作</h3>
+                        <p>每一件作品都由经验丰富的匠人亲手打造，倾注心血与温度。</p>
+                    </div>
+                </a-col>
+                <a-col :xs="24" :md="8">
+                    <div class="feature-item">
+                        <div class="feature-icon">💎</div>
+                        <h3>严选优质材料</h3>
+                        <p>我们在全球范围内甄选高品质原材料，确保作品的质感与耐久度。</p>
+                    </div>
+                </a-col>
+                <a-col :xs="24" :md="8">
+                    <div class="feature-item">
+                        <div class="feature-icon">🎨</div>
+                        <h3>个性化定制</h3>
+                        <p>支持深度个性化定制，将您的灵感和故事融入专属的手作之中。</p>
+                    </div>
+                </a-col>
+            </a-row>
+        </section>
+
+        <section class="shell section banner-section">
+            <div class="cta-banner">
+                <h2>准备好探索您的专属手作了吗？</h2>
+                <p>开启一段关于匠心与美学的旅程，发现属于你的独特好物。</p>
+                <RouterLink to="/products">
+                    <a-button class="manual-ant-btn manual-ant-btn-primary" size="large" style="background: white; color: var(--coral-deep);">立即探索</a-button>
+                </RouterLink>
+            </div>
+        </section>
+
+        <footer class="shell section site-footer">
+            <a-row :gutter="[32, 32]">
+                <a-col :xs="24" :md="8">
+                    <h3 class="footer-title">关于我们</h3>
+                    <p class="footer-text">我们致力于传承手工技艺，创造独一无二的艺术品。用心呈现每一件手作，为您传递充满匠心与温度的品牌美学。</p>
+                </a-col>
+                <a-col :xs="24" :md="8">
+                    <h3 class="footer-title">快速链接</h3>
+                    <ul class="footer-links">
+                        <li><RouterLink to="/products">所有作品</RouterLink></li>
+                        <li><RouterLink to="/login">用户登录</RouterLink></li>
+                        <li><RouterLink to="/register">注册账号</RouterLink></li>
+                    </ul>
+                </a-col>
+                <a-col :xs="24" :md="8">
+                    <h3 class="footer-title">联系方式</h3>
+                    <ul class="footer-contact">
+                        <li>📍 地址：xx市xx区xx创意园x栋</li>
+                        <li>📞 电话：138-xxxx-xxxx</li>
+                        <li>✉️ 邮箱：contact@manual.com</li>
+                    </ul>
+                </a-col>
+            </a-row>
+            <div class="footer-bottom">
+                <p>&copy; 2026 手工门店展示站. All Rights Reserved.</p>
+            </div>
+        </footer>
     </main>
 </template>
 
@@ -332,14 +400,19 @@ h3 {
     cursor: pointer;
 }
 
-.category-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+.category-card,
+.product-card,
+.signal-item-clickable {
+    transition: all 0.3s ease;
 }
 
 .category-card:hover,
-.category-card:focus-visible {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 44px rgba(126, 69, 47, 0.18);
+.category-card:focus-visible,
+.product-card:hover,
+.signal-item-clickable:hover {
+    background: rgba(255, 253, 248, 0.95);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(126, 69, 47, 0.08);
 }
 
 .signal-body {
@@ -388,6 +461,129 @@ h3 {
     color: var(--coral-deep);
 }
 
+.text-center {
+    text-align: center;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+}
+
+.text-center h2 {
+    margin-top: 12px;
+}
+
+.features-grid {
+    margin-top: 48px;
+}
+
+.feature-item {
+    text-align: center;
+    padding: 32px 24px;
+    border-radius: 24px;
+    background: rgba(255, 253, 248, 0.6);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.feature-item:hover {
+    background: rgba(255, 253, 248, 0.95);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(126, 69, 47, 0.08);
+}
+
+.feature-icon {
+    font-size: 48px;
+    margin-bottom: 24px;
+}
+
+.feature-item h3 {
+    margin-bottom: 16px;
+    color: var(--text-strong);
+}
+
+.feature-item p {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.cta-banner {
+    background: linear-gradient(135deg, var(--coral) 0%, var(--gold) 100%);
+    border-radius: 32px;
+    padding: 64px 32px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 24px 48px rgba(255, 126, 103, 0.3);
+}
+
+.cta-banner h2 {
+    color: white;
+    margin-bottom: 16px;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.cta-banner p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    margin-bottom: 32px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cta-banner .manual-ant-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.site-footer {
+    margin-top: 24px;
+    padding-top: 64px;
+    border-top: 1px solid rgba(126, 69, 47, 0.1);
+}
+
+.footer-title {
+    margin-bottom: 24px;
+    color: var(--text-strong);
+    font-size: 1.2rem;
+}
+
+.footer-text {
+    color: var(--text-muted);
+    line-height: 1.8;
+}
+
+.footer-links,
+.footer-contact {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links li,
+.footer-contact li {
+    margin-bottom: 16px;
+    color: var(--text-muted);
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: var(--coral-deep);
+}
+
+.footer-bottom {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(126, 69, 47, 0.1);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
 @media (max-width: 1120px) {
     .hero-grid {
         grid-template-columns: 1fr;
@@ -396,6 +592,10 @@ h3 {
     .section-head {
         align-items: flex-start;
         flex-direction: column;
+    }
+    
+    .text-center {
+        align-items: center;
     }
 }
 
@@ -430,6 +630,10 @@ h3 {
 
     :deep(.manual-ant-btn.ant-btn) {
         width: 100%;
+    }
+    
+    .cta-banner {
+        padding: 48px 24px;
     }
 }
 </style>

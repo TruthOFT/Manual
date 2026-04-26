@@ -97,7 +97,7 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
         <section class="shell hero-section">
             <div class="hero-copy">
                 <p class="eyebrow">精选作品</p>
-                <h1>按材料类型、分类和产地筛选作品，再进入详情页查看它的来历与制作信息。</h1>
+                <h1>细数材质与工艺，寻觅与您契合的手作之美，探索背后的匠心故事。</h1>
 
                 <a-alert v-if="errorMessage" type="error" show-icon :message="errorMessage">
                     <template #action>
@@ -304,6 +304,13 @@ h3 {
 
 .product-card {
     cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.product-card:hover {
+    background: rgba(255, 253, 248, 0.95);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(126, 69, 47, 0.08);
 }
 
 .product-card :deep(.ant-card-cover img) {

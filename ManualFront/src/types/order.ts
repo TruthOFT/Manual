@@ -20,6 +20,7 @@ export type OrderItem = {
     productName: string
     skuName: string
     productCover: string | null
+    skuCover: string | null
     specText: string | null
     quantity: number
     salePrice: number | string
@@ -61,6 +62,7 @@ export type OrderCreateRequest = {
     skuId: string
     quantity: number
     addressId: string
+    couponReceiveId?: string
     buyerRemark?: string
 }
 

@@ -171,7 +171,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div v-if="order.item" class="item-row">
-                    <img :src="resolveUploadUrl(order.item.productCover)" :alt="order.item.productName" />
+                    <img :src="resolveUploadUrl(order.item.skuCover || order.item.productCover)" :alt="order.item.productName" />
                     <div>
                         <strong>{{ order.item.productName }}</strong>
                         <span>{{ order.item.skuName }} / {{ order.item.specText || '标准规格' }}</span>

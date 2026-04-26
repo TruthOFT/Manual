@@ -17,9 +17,6 @@ public class ProductDetailVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long categoryId;
 
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long artisanId;
-
     private String productName;
 
     private String productSubtitle;
@@ -44,17 +41,13 @@ public class ProductDetailVO {
 
     private Integer reviewCount;
 
+    private Boolean favorited = false;
+
     private BigDecimal minPrice;
 
     private BigDecimal maxPrice;
 
     private String categoryName;
-
-    private String artisanName;
-
-    private String shopName;
-
-    private String artisanAvatar;
 
     private List<ProductImageVO> images = new ArrayList<>();
 

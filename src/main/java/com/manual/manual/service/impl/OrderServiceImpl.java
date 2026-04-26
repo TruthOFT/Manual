@@ -10,11 +10,13 @@ import com.manual.manual.model.dto.order.OrderCreateRequest;
 import com.manual.manual.model.dto.order.UserAddressSaveRequest;
 import com.manual.manual.model.entity.User;
 import com.manual.manual.model.vo.LoginUserVO;
+import com.manual.manual.model.vo.coupon.UserCouponVO;
 import com.manual.manual.model.vo.order.OrderDetailVO;
 import com.manual.manual.model.vo.order.OrderItemVO;
 import com.manual.manual.model.vo.order.OrderSkuSnapshotVO;
 import com.manual.manual.model.vo.order.UserAddressVO;
 import com.manual.manual.service.OrderService;
+import com.manual.manual.service.RecommendationService;
 import com.manual.manual.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,6 +52,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Resource
     private OrderProperties orderProperties;
+
+    @Resource
+    private RecommendationService recommendationService;
 
     @Override
     public List<UserAddressVO> listCurrentUserAddresses(HttpServletRequest request) {
@@ -194,7 +199,8 @@ public class OrderServiceImpl implements OrderService {
         Long orderItemId = IdWorker.getId();
         String orderNo = buildOrderNo(orderId);
         BigDecimal productAmount = sku.getPrice().multiply(BigDecimal.valueOf(quantity));
-        BigDecimal discountAmount = BigDecimal.ZERO;
+        UserCouponVO coupon = loadUsableCoupon(loginUser.getId(), createRequest.getCouponReceiveId(), productAmount);
+        BigDecimal discountAmount = calculateDiscountAmount(coupon, productAmount);
         BigDecimal freightAmount = BigDecimal.ZERO;
         BigDecimal payAmount = productAmount.subtract(discountAmount).add(freightAmount);
         orderMapper.insertOrder(
@@ -219,6 +225,14 @@ public class OrderServiceImpl implements OrderService {
                 sku.getPrice(),
                 productAmount
         );
+        if (coupon != null) {
+            if (orderMapper.markCouponReceiveUsed(loginUser.getId(), coupon.getReceiveId(), orderId) <= 0) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "优惠券状态已变化，请刷新后重试");
+            }
+            if (orderMapper.increaseCouponUsedCount(coupon.getId()) <= 0) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "优惠券使用统计更新失败");
+            }
+        }
         orderDelayMessageService.sendOrderCancelDelay(orderId);
         return requireUserOrder(loginUser.getId(), orderId);
     }
@@ -247,6 +261,15 @@ public class OrderServiceImpl implements OrderService {
         if (orderMapper.markOrderPaid(loginUser.getId(), orderId) <= 0) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "订单状态已变化，请刷新后重试");
         }
+        recommendationService.recordSystemBehavior(
+                loginUser.getId(),
+                item.getProductId(),
+                item.getSkuId(),
+                4,
+                BigDecimal.valueOf(5),
+                4,
+                orderId
+        );
         return userService.getLoginUserVO(userService.getLoginUser(request));
     }
 
@@ -264,6 +287,7 @@ public class OrderServiceImpl implements OrderService {
         }
         if (orderMapper.cancelUserOrder(loginUser.getId(), orderId) > 0) {
             releaseOrderLockedStock(orderId);
+            restoreOrderCoupon(orderId);
         }
         return true;
     }
@@ -276,6 +300,7 @@ public class OrderServiceImpl implements OrderService {
         }
         if (orderMapper.cancelTimeoutOrder(orderId) > 0) {
             releaseOrderLockedStock(orderId);
+            restoreOrderCoupon(orderId);
         }
     }
 
@@ -283,11 +308,7 @@ public class OrderServiceImpl implements OrderService {
         if (sku == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "商品规格不存在");
         }
-        if (safeInteger(sku.getSkuStatus()) != ENABLED
-                || safeInteger(sku.getProductStatus()) != ENABLED
-                || safeInteger(sku.getProductAuditStatus()) != ENABLED
-                || safeInteger(sku.getArtisanAuditStatus()) != ENABLED
-                || safeInteger(sku.getArtisanShelfStatus()) != ENABLED) {
+        if (safeInteger(sku.getSkuStatus()) != ENABLED) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "商品当前不可购买");
         }
         int availableStock = safeInteger(sku.getStock()) - safeInteger(sku.getLockedStock());
@@ -346,6 +367,16 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.releaseSkuLockedStock(item.getSkuId(), item.getQuantity());
     }
 
+    private void restoreOrderCoupon(Long orderId) {
+        UserCouponVO coupon = orderMapper.selectOrderCoupon(orderId);
+        if (coupon == null) {
+            return;
+        }
+        if (orderMapper.restoreOrderCouponReceive(orderId) > 0) {
+            orderMapper.decreaseCouponUsedCount(coupon.getId());
+        }
+    }
+
     private OrderItemVO requireOrderItem(Long orderId) {
         OrderItemVO item = orderMapper.selectOrderItem(orderId);
         if (item == null) {
@@ -368,6 +399,53 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "购买数量必须大于 0");
         }
         return quantity;
+    }
+
+    private UserCouponVO loadUsableCoupon(Long userId, Long couponReceiveId, BigDecimal productAmount) {
+        if (couponReceiveId == null) {
+            return null;
+        }
+        if (couponReceiveId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "优惠券无效");
+        }
+        UserCouponVO coupon = orderMapper.selectUsableCouponReceive(userId, couponReceiveId);
+        if (coupon == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "优惠券不可用或已过期");
+        }
+        BigDecimal thresholdAmount = defaultAmount(coupon.getThresholdAmount());
+        if (productAmount.compareTo(thresholdAmount) < 0) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "订单金额未达到优惠券使用门槛");
+        }
+        BigDecimal discountAmount = calculateDiscountAmount(coupon, productAmount);
+        if (discountAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "优惠券优惠金额无效");
+        }
+        return coupon;
+    }
+
+    private BigDecimal calculateDiscountAmount(UserCouponVO coupon, BigDecimal productAmount) {
+        if (coupon == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal discountAmount;
+        if (safeInteger(coupon.getCouponType()) == 2) {
+            BigDecimal rate = defaultAmount(coupon.getDiscountRate());
+            if (rate.compareTo(BigDecimal.ZERO) <= 0 || rate.compareTo(BigDecimal.TEN) >= 0) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "折扣券折扣无效");
+            }
+            BigDecimal discountedPayAmount = productAmount.multiply(rate).divide(BigDecimal.TEN);
+            discountAmount = productAmount.subtract(discountedPayAmount);
+        } else {
+            discountAmount = defaultAmount(coupon.getDiscountAmount());
+        }
+        if (discountAmount.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return discountAmount.min(productAmount);
+    }
+
+    private BigDecimal defaultAmount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private String buildOrderNo(Long orderId) {

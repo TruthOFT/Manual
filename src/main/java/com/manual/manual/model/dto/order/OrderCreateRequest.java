@@ -11,5 +11,7 @@ public class OrderCreateRequest {
 
     private Long addressId;
 
+    private Long couponReceiveId;
+
     private String buyerRemark;
 }

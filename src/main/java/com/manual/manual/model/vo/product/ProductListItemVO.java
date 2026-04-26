@@ -15,9 +15,6 @@ public class ProductListItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long categoryId;
 
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long artisanId;
-
     private String productName;
 
     private String productSubtitle;
@@ -37,10 +34,6 @@ public class ProductListItemVO {
     private BigDecimal minPrice;
 
     private BigDecimal maxPrice;
-
-    private String artisanName;
-
-    private String shopName;
 
     private String categoryName;
 }

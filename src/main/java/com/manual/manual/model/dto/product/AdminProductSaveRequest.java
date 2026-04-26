@@ -5,6 +5,8 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class AdminProductSaveRequest implements Serializable {
@@ -13,8 +15,6 @@ public class AdminProductSaveRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long categoryId;
-
-    private Long artisanId;
 
     private String productName;
 
@@ -45,4 +45,6 @@ public class AdminProductSaveRequest implements Serializable {
     private Integer status;
 
     private Integer sortOrder;
+
+    private List<AdminProductSkuSaveRequest> skus = new ArrayList<>();
 }

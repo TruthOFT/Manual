@@ -34,7 +34,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         overviewVO.setPendingOrderCount(defaultLong(overviewVO.getPendingOrderCount()));
         overviewVO.setPendingShipmentOrderCount(defaultLong(overviewVO.getPendingShipmentOrderCount()));
         overviewVO.setAbnormalAddressOrderCount(defaultLong(overviewVO.getAbnormalAddressOrderCount()));
-        overviewVO.setActiveArtisanCount(defaultLong(overviewVO.getActiveArtisanCount()));
+        overviewVO.setActiveCustomerCount(defaultLong(overviewVO.getActiveCustomerCount()));
         overviewVO.setRiskAlertCount(defaultLong(overviewVO.getRiskAlertCount()));
         overviewVO.setLowStockRiskCount(defaultLong(overviewVO.getLowStockRiskCount()));
         overviewVO.setRefundAlertCount(defaultLong(overviewVO.getRefundAlertCount()));
@@ -59,7 +59,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         overviewVO.setPendingOrderCount(0L);
         overviewVO.setPendingShipmentOrderCount(0L);
         overviewVO.setAbnormalAddressOrderCount(0L);
-        overviewVO.setActiveArtisanCount(0L);
+        overviewVO.setActiveCustomerCount(0L);
         overviewVO.setRiskAlertCount(0L);
         overviewVO.setLowStockRiskCount(0L);
         overviewVO.setRefundAlertCount(0L);

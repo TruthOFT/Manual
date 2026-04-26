@@ -12,7 +12,5 @@ public class HomePageVO {
 
     private List<HomeProductVO> products = new ArrayList<>();
 
-    private List<HomeArtisanVO> artisans = new ArrayList<>();
-
     private List<HomeRecentOrderVO> recentOrders = new ArrayList<>();
 }

@@ -4,12 +4,14 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { pinia } from '@/stores'
 import { useAdminAuthStore } from '@/stores/auth'
 import AdminLoginView from '@/views/AdminLoginView.vue'
-import ArtisanApplicationsView from '@/views/ArtisanApplicationsView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
+import CouponsView from '@/views/CouponsView.vue'
+import CustomersView from '@/views/CustomersView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import OrdersView from '@/views/OrdersView.vue'
 import ProductsView from '@/views/ProductsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import StaffView from '@/views/StaffView.vue'
 import UsersView from '@/views/UsersView.vue'
 
 const router = createRouter({
@@ -41,14 +43,24 @@ const router = createRouter({
           component: UsersView,
         },
         {
-          path: 'artisan-applications',
-          name: 'artisan-applications',
-          component: ArtisanApplicationsView,
+          path: 'customers',
+          name: 'customers',
+          component: CustomersView,
+        },
+        {
+          path: 'staff',
+          name: 'staff',
+          component: StaffView,
         },
         {
           path: 'products',
           name: 'products',
           component: ProductsView,
+        },
+        {
+          path: 'coupons',
+          name: 'coupons',
+          component: CouponsView,
         },
         {
           path: 'orders',

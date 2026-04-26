@@ -1,10 +1,7 @@
 export type AdminProductListItem = {
     id: string
     categoryId: string
-    artisanId: string
     categoryName: string | null
-    artisanName: string | null
-    shopName: string | null
     productName: string
     productSubtitle: string | null
     productCover: string | null
@@ -25,18 +22,8 @@ export type AdminProductCategoryOption = {
     categoryLevel: number
 }
 
-export type AdminProductArtisanOption = {
-    id: string
-    userId: string
-    artisanName: string
-    shopName: string
-    userAccount: string
-    userName: string
-}
-
 export type AdminProductMeta = {
     categories: AdminProductCategoryOption[]
-    artisans: AdminProductArtisanOption[]
 }
 
 export type AdminProductImage = {
@@ -66,13 +53,23 @@ export type AdminProductSku = {
     status: number
 }
 
+export type AdminProductSkuSaveRequest = {
+    skuCode?: string
+    skuName: string
+    skuCover: string
+    specText: string
+    materialType: string
+    weight: number | string
+    price: number | string
+    originalPrice: number | string
+    stock: number
+    status: number
+}
+
 export type AdminProductDetail = {
     id: string
     categoryId: string
-    artisanId: string
     categoryName: string | null
-    artisanName: string | null
-    shopName: string | null
     productName: string
     productSubtitle: string | null
     productCover: string | null
@@ -98,7 +95,6 @@ export type AdminProductDetail = {
 
 export type AdminProductSaveRequest = {
     categoryId: string
-    artisanId: string
     productName: string
     productSubtitle: string
     productCover: string
@@ -114,4 +110,5 @@ export type AdminProductSaveRequest = {
     auditStatus: number
     status: number
     sortOrder: number
+    skus: AdminProductSkuSaveRequest[]
 }

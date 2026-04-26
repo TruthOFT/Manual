@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
     CheckOutlined,
-    CloseOutlined,
     DeleteOutlined,
     EditOutlined,
     EyeOutlined,
@@ -9,7 +8,7 @@ import {
     ReloadOutlined,
 } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import {
     approveAdminProduct,
@@ -18,23 +17,31 @@ import {
     getAdminProductDetail,
     getAdminProductMeta,
     getAdminProducts,
-    rejectAdminProduct,
     updateAdminProduct,
 } from '@/api/product'
 import { API_CONTEXT_PATH, BASE_URL } from '@/api/request'
+import { uploadFile } from '@/api/upload'
 import type {
     AdminProductDetail,
     AdminProductListItem,
     AdminProductMeta,
     AdminProductSaveRequest,
+    AdminProductSkuSaveRequest,
 } from '@/types/product'
+
+type AdminProductSkuForm = AdminProductSkuSaveRequest & {
+    pendingCoverFile?: File | null
+    coverPreviewUrl?: string
+}
+
+type AdminProductForm = Omit<AdminProductSaveRequest, 'skus'> & {
+    skus: AdminProductSkuForm[]
+}
 
 const columns = [
     { title: '商品名称', dataIndex: 'productName', key: 'productName' },
     { title: '分类', dataIndex: 'categoryName', key: 'categoryName' },
-    { title: '匠人', dataIndex: 'artisanName', key: 'artisanName' },
     { title: '库存', dataIndex: 'inventory', key: 'inventory' },
-    { title: '审核状态', dataIndex: 'auditStatus', key: 'auditStatus' },
     { title: '上架状态', dataIndex: 'status', key: 'status' },
     { title: '价格区间', key: 'priceRange' },
     { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime' },
@@ -57,12 +64,31 @@ const products = ref<AdminProductListItem[]>([])
 const currentProduct = ref<AdminProductDetail | null>(null)
 const meta = ref<AdminProductMeta>({
     categories: [],
-    artisans: [],
 })
+const coverFileInputRef = ref<HTMLInputElement>()
+const pendingCoverFile = ref<File | null>(null)
+const coverPreviewUrl = ref('')
+const skuCoverFileInputRefs = ref<Array<HTMLInputElement | null>>([])
 
-const form = reactive<AdminProductSaveRequest>({
+function createDefaultSkuRow(): AdminProductSkuForm {
+    return {
+        skuCode: '',
+        skuName: '默认规格',
+        skuCover: '',
+        specText: '默认规格',
+        materialType: '',
+        weight: 0,
+        price: 0,
+        originalPrice: 0,
+        stock: 0,
+        status: 1,
+        pendingCoverFile: null,
+        coverPreviewUrl: '',
+    }
+}
+
+const form = reactive<AdminProductForm>({
     categoryId: '',
-    artisanId: '',
     productName: '',
     productSubtitle: '',
     productCover: '',
@@ -75,15 +101,17 @@ const form = reactive<AdminProductSaveRequest>({
     inventory: 0,
     minPrice: 0,
     maxPrice: 0,
-    auditStatus: 0,
-    status: 0,
+    auditStatus: 1,
+    status: 1,
     sortOrder: 0,
+    skus: [createDefaultSkuRow()],
 })
 
 const pendingCount = computed(() => products.value.filter((item) => item.auditStatus === 0).length)
 const onShelfCount = computed(() => products.value.filter((item) => item.status === 1).length)
 const totalCount = computed(() => products.value.length)
 const modalTitle = computed(() => (isEditMode.value ? '编辑商品' : '新增商品'))
+const displayProductCoverUrl = computed(() => coverPreviewUrl.value || resolveImageUrl(form.productCover))
 
 function getAuditText(value: number) {
     if (value === -1) return '草稿'
@@ -100,16 +128,19 @@ function getAuditColor(value: number) {
 }
 
 function getStatusText(value: number) {
-    if (value === 0) return '草稿'
-    if (value === 1) return '上架中'
-    if (value === 2) return '已下架'
+    if (value === 1) return '上架'
+    if (value === 0 || value === 2) return '下架'
     return '未知'
 }
 
 function getStatusColor(value: number) {
     if (value === 1) return 'blue'
-    if (value === 2) return 'default'
+    if (value === 0 || value === 2) return 'default'
     return 'purple'
+}
+
+function normalizeProductStatus(value: number) {
+    return value === 1 ? 1 : 0
 }
 
 function formatCategoryLabel(item: AdminProductMeta['categories'][number]) {
@@ -117,13 +148,6 @@ function formatCategoryLabel(item: AdminProductMeta['categories'][number]) {
         return `${item.parentName} / ${item.categoryName}`
     }
     return item.categoryName
-}
-
-function formatArtisanLabel(item: AdminProductMeta['artisans'][number]) {
-    const artisanName = item.artisanName || '-'
-    const shopName = item.shopName || '-'
-    const userName = item.userName || item.userAccount
-    return `${artisanName} (${shopName}) - ${userName}`
 }
 
 function resolveImageUrl(url?: string | null) {
@@ -173,9 +197,110 @@ function resolveImageUrl(url?: string | null) {
     return `${BASE_URL}${normalizedPath}`
 }
 
+function validateImageFile(file: File, input: HTMLInputElement) {
+    if (!file.type.startsWith('image/')) {
+        message.warning('请选择图片文件')
+        input.value = ''
+        return false
+    }
+    if (file.size > 100 * 1024 * 1024) {
+        message.warning('图片不能超过 100M')
+        input.value = ''
+        return false
+    }
+    return true
+}
+
+function revokeProductCoverPreview() {
+    if (coverPreviewUrl.value) {
+        URL.revokeObjectURL(coverPreviewUrl.value)
+    }
+    coverPreviewUrl.value = ''
+    pendingCoverFile.value = null
+    if (coverFileInputRef.value) {
+        coverFileInputRef.value.value = ''
+    }
+}
+
+function revokeSkuCoverPreview(sku: AdminProductSkuForm) {
+    if (sku.coverPreviewUrl) {
+        URL.revokeObjectURL(sku.coverPreviewUrl)
+    }
+    sku.coverPreviewUrl = ''
+    sku.pendingCoverFile = null
+}
+
+function revokeAllSkuCoverPreviews() {
+    form.skus.forEach(revokeSkuCoverPreview)
+    skuCoverFileInputRefs.value.forEach((input) => {
+        if (input) {
+            input.value = ''
+        }
+    })
+    skuCoverFileInputRefs.value = []
+}
+
+function openProductCoverPicker() {
+    coverFileInputRef.value?.click()
+}
+
+function handleProductCoverFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file || !validateImageFile(file, input)) {
+        return
+    }
+    revokeProductCoverPreview()
+    pendingCoverFile.value = file
+    coverPreviewUrl.value = URL.createObjectURL(file)
+}
+
+function clearProductCover() {
+    revokeProductCoverPreview()
+    form.productCover = ''
+}
+
+function setSkuCoverFileInputRef(el: unknown, index: number) {
+    skuCoverFileInputRefs.value[index] = el instanceof HTMLInputElement ? el : null
+}
+
+function openSkuCoverPicker(index: number) {
+    skuCoverFileInputRefs.value[index]?.click()
+}
+
+function handleSkuCoverFileChange(event: Event, index: number) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    const sku = form.skus[index]
+    if (!sku || !file || !validateImageFile(file, input)) {
+        return
+    }
+    revokeSkuCoverPreview(sku)
+    sku.pendingCoverFile = file
+    sku.coverPreviewUrl = URL.createObjectURL(file)
+}
+
+function getSkuCoverDisplayUrl(sku: AdminProductSkuForm) {
+    return sku.coverPreviewUrl || resolveImageUrl(sku.skuCover) || displayProductCoverUrl.value
+}
+
+function clearSkuCover(index: number) {
+    const sku = form.skus[index]
+    if (!sku) {
+        return
+    }
+    revokeSkuCoverPreview(sku)
+    sku.skuCover = ''
+    const input = skuCoverFileInputRefs.value[index]
+    if (input) {
+        input.value = ''
+    }
+}
+
 function resetForm() {
+    revokeProductCoverPreview()
+    revokeAllSkuCoverPreviews()
     form.categoryId = ''
-    form.artisanId = ''
     form.productName = ''
     form.productSubtitle = ''
     form.productCover = ''
@@ -188,23 +313,57 @@ function resetForm() {
     form.inventory = 0
     form.minPrice = 0
     form.maxPrice = 0
-    form.auditStatus = 0
-    form.status = 0
+    form.auditStatus = 1
+    form.status = 1
     form.sortOrder = 0
+    form.skus = [createDefaultSkuRow()]
     currentEditId.value = ''
     isEditMode.value = false
+}
+
+function addSkuRow() {
+    form.skus.push(createDefaultSkuRow())
+}
+
+function removeSkuRow(index: number) {
+    if (form.skus.length <= 1) {
+        message.warning('至少保留一个商品规格')
+        return
+    }
+    revokeSkuCoverPreview(form.skus[index])
+    form.skus.splice(index, 1)
+    skuCoverFileInputRefs.value.splice(index, 1)
+}
+
+function normalizeSkuRows() {
+    form.skus = form.skus.length ? form.skus : [createDefaultSkuRow()]
+    if (form.skus.length === 1 && form.skus[0].skuName === '默认规格') {
+        if (Number(form.skus[0].price || 0) === 0 && Number(form.minPrice || 0) > 0) {
+            form.skus[0].price = Number(form.minPrice || 0)
+        }
+        if (Number(form.skus[0].originalPrice || 0) === 0 && Number(form.maxPrice || 0) > 0) {
+            form.skus[0].originalPrice = Number(form.maxPrice || 0)
+        }
+        if (Number(form.skus[0].stock || 0) === 0 && Number(form.inventory || 0) > 0) {
+            form.skus[0].stock = Number(form.inventory || 0)
+        }
+    }
+    const enabledSkus = form.skus.filter((sku) => sku.status === 1)
+    const priceSkus = enabledSkus.length ? enabledSkus : form.skus
+    const prices = priceSkus.map((sku) => Number(sku.price || 0))
+    form.minPrice = Math.min(...prices)
+    form.maxPrice = Math.max(...prices)
+    form.inventory = enabledSkus.reduce((total, sku) => total + Number(sku.stock || 0), 0)
 }
 
 function validateForm() {
     if (!form.categoryId) {
         throw new Error('请选择分类')
     }
-    if (!form.artisanId) {
-        throw new Error('请选择匠人')
-    }
     if (!form.productName.trim()) {
         throw new Error('请输入商品名称')
     }
+    normalizeSkuRows()
     const minPrice = Number(form.minPrice || 0)
     const maxPrice = Number(form.maxPrice || 0)
     const inventory = Number(form.inventory || 0)
@@ -224,18 +383,69 @@ function validateForm() {
     if (!Number.isInteger(handmadeCycleDays) || handmadeCycleDays < 0) {
         throw new Error('制作周期必须是大于等于 0 的整数')
     }
-    if (form.status === 1 && form.auditStatus !== 1) {
-        throw new Error('仅审核通过的商品才可以上架')
+    if (!form.skus.length) {
+        throw new Error('请至少添加一个商品规格')
+    }
+    const hasPurchasableSku = form.skus.some((sku) => sku.status === 1 && Number(sku.stock || 0) > 0)
+    form.skus.forEach((sku, index) => {
+        if (!sku.skuName.trim()) {
+            throw new Error(`第 ${index + 1} 个规格名称不能为空`)
+        }
+        const price = Number(sku.price || 0)
+        const originalPrice = Number(sku.originalPrice || 0)
+        const stock = Number(sku.stock || 0)
+        const weight = Number(sku.weight || 0)
+        if (Number.isNaN(price) || price < 0) {
+            throw new Error(`第 ${index + 1} 个规格售价不能小于 0`)
+        }
+        if (Number.isNaN(originalPrice) || originalPrice < 0) {
+            throw new Error(`第 ${index + 1} 个规格原价不能小于 0`)
+        }
+        if (!Number.isInteger(stock) || stock < 0) {
+            throw new Error(`第 ${index + 1} 个规格库存必须是大于等于 0 的整数`)
+        }
+        if (Number.isNaN(weight) || weight < 0) {
+            throw new Error(`第 ${index + 1} 个规格重量不能小于 0`)
+        }
+    })
+    if (form.status === 1 && !hasPurchasableSku) {
+        throw new Error('上架商品至少需要一个启用且有库存的规格')
     }
 }
 
-function buildSavePayload(): AdminProductSaveRequest {
+async function resolveProductCover() {
+    if (!pendingCoverFile.value) {
+        return form.productCover.trim()
+    }
+    return uploadFile('product', pendingCoverFile.value)
+}
+
+async function resolveSkuCover(sku: AdminProductSkuForm) {
+    if (sku.pendingCoverFile) {
+        return uploadFile('product', sku.pendingCoverFile)
+    }
+    return sku.skuCover.trim()
+}
+
+async function buildSavePayload(): Promise<AdminProductSaveRequest> {
+    const productCover = await resolveProductCover()
+    const skus = await Promise.all(form.skus.map(async (sku) => ({
+        skuCode: sku.skuCode || '',
+        skuName: sku.skuName.trim(),
+        skuCover: await resolveSkuCover(sku),
+        specText: sku.specText.trim(),
+        materialType: sku.materialType.trim(),
+        weight: Number(sku.weight || 0),
+        price: Number(sku.price || 0),
+        originalPrice: Number(sku.originalPrice || 0),
+        stock: Number(sku.stock || 0),
+        status: sku.status,
+    })))
     return {
         categoryId: form.categoryId,
-        artisanId: form.artisanId,
         productName: form.productName.trim(),
         productSubtitle: form.productSubtitle.trim(),
-        productCover: form.productCover.trim(),
+        productCover,
         productDesc: form.productDesc.trim(),
         craftType: form.craftType.trim(),
         materialDesc: form.materialDesc.trim(),
@@ -248,6 +458,7 @@ function buildSavePayload(): AdminProductSaveRequest {
         auditStatus: form.auditStatus,
         status: form.status,
         sortOrder: Number(form.sortOrder || 0),
+        skus,
     }
 }
 
@@ -299,10 +510,11 @@ async function openEditModal(productId: string) {
     saving.value = true
     try {
         const detail = await getAdminProductDetail(productId)
+        revokeProductCoverPreview()
+        revokeAllSkuCoverPreviews()
         isEditMode.value = true
         currentEditId.value = productId
         form.categoryId = detail.categoryId
-        form.artisanId = detail.artisanId
         form.productName = detail.productName
         form.productSubtitle = detail.productSubtitle || ''
         form.productCover = detail.productCover || ''
@@ -316,8 +528,22 @@ async function openEditModal(productId: string) {
         form.minPrice = Number(detail.minPrice || 0)
         form.maxPrice = Number(detail.maxPrice || 0)
         form.auditStatus = detail.auditStatus
-        form.status = detail.status
+        form.status = normalizeProductStatus(detail.status)
         form.sortOrder = detail.sortOrder || 0
+        form.skus = detail.skus.length
+            ? detail.skus.map((sku) => ({
+                skuCode: sku.skuCode,
+                skuName: sku.skuName,
+                skuCover: sku.skuCover || '',
+                specText: sku.specText || '',
+                materialType: sku.materialType || '',
+                weight: Number(sku.weight || 0),
+                price: Number(sku.price || 0),
+                originalPrice: Number(sku.originalPrice || 0),
+                stock: Number(sku.stock || 0),
+                status: sku.status,
+            }))
+            : [createDefaultSkuRow()]
         modalVisible.value = true
     } catch (error) {
         message.error(error instanceof Error ? error.message : '加载商品编辑数据失败')
@@ -335,7 +561,7 @@ async function handleSave() {
     }
     saving.value = true
     try {
-        const payload = buildSavePayload()
+        const payload = await buildSavePayload()
         if (isEditMode.value) {
             await updateAdminProduct(currentEditId.value, payload)
         } else {
@@ -396,15 +622,13 @@ async function approveCurrentProduct() {
     await runAuditAction(() => approveAdminProduct(currentProduct.value!.id))
 }
 
-async function rejectCurrentProduct() {
-    if (!currentProduct.value) {
-        return
-    }
-    await runAuditAction(() => rejectAdminProduct(currentProduct.value!.id))
-}
-
 onMounted(() => {
     void Promise.all([loadProducts(), loadMeta()])
+})
+
+onBeforeUnmount(() => {
+    revokeProductCoverPreview()
+    revokeAllSkuCoverPreviews()
 })
 </script>
 
@@ -427,7 +651,7 @@ onMounted(() => {
                 </div>
                 <div class="metric-item">
                     <strong>{{ onShelfCount }}</strong>
-                    <span>上架中</span>
+                    <span>上架</span>
                 </div>
             </div>
         </a-card>
@@ -454,7 +678,7 @@ onMounted(() => {
                 <a-input
                     v-model:value="keyword"
                     size="large"
-                    placeholder="搜索商品、分类或匠人"
+                    placeholder="搜索商品或分类"
                     @press-enter="loadProducts"
                 />
                 <a-select v-model:value="auditStatus" allow-clear size="large" placeholder="审核状态">
@@ -464,9 +688,8 @@ onMounted(() => {
                     <a-select-option :value="2">已驳回</a-select-option>
                 </a-select>
                 <a-select v-model:value="status" allow-clear size="large" placeholder="上架状态">
-                    <a-select-option :value="0">草稿</a-select-option>
-                    <a-select-option :value="1">上架中</a-select-option>
-                    <a-select-option :value="2">已下架</a-select-option>
+                    <a-select-option :value="1">上架</a-select-option>
+                    <a-select-option :value="0">下架</a-select-option>
                 </a-select>
                 <a-button type="primary" size="large" @click="loadProducts">查询</a-button>
             </div>
@@ -481,11 +704,6 @@ onMounted(() => {
                                 <p>{{ record.productSubtitle || '暂无副标题' }}</p>
                             </div>
                         </div>
-                    </template>
-                    <template v-else-if="column.key === 'auditStatus'">
-                        <a-tag :color="getAuditColor(record.auditStatus)">
-                            {{ getAuditText(record.auditStatus) }}
-                        </a-tag>
                     </template>
                     <template v-else-if="column.key === 'status'">
                         <a-tag :color="getStatusColor(record.status)">
@@ -518,14 +736,6 @@ onMounted(() => {
                                 <CheckOutlined />
                                 通过
                             </a-button>
-                            <a-button
-                                v-if="record.auditStatus === 0 || record.auditStatus === 1"
-                                size="small"
-                                @click="runAuditAction(() => rejectAdminProduct(record.id))"
-                            >
-                                <CloseOutlined />
-                                驳回
-                            </a-button>
                         </a-space>
                     </template>
                 </template>
@@ -556,12 +766,9 @@ onMounted(() => {
                         </div>
                     </div>
                     <div class="meta-grid">
-                        <span>匠人：{{ currentProduct.artisanName || '-' }}</span>
-                        <span>店铺：{{ currentProduct.shopName || '-' }}</span>
                         <span>制作周期：{{ currentProduct.handmadeCycleDays }} 天</span>
                         <span>库存：{{ currentProduct.inventory }}</span>
                         <span>价格区间：¥{{ currentProduct.minPrice }} - ¥{{ currentProduct.maxPrice }}</span>
-                        <span>支持定制：{{ currentProduct.supportCustom === 1 ? '是' : '否' }}</span>
                     </div>
                     <p class="detail-desc">{{ currentProduct.productDesc || '暂无商品描述' }}</p>
                 </a-card>
@@ -619,13 +826,6 @@ onMounted(() => {
                 >
                     审核通过
                 </a-button>
-                <a-button
-                    v-if="currentProduct.auditStatus === 0 || currentProduct.auditStatus === 1"
-                    :loading="actionLoading"
-                    @click="rejectCurrentProduct"
-                >
-                    驳回商品
-                </a-button>
             </div>
         </template>
     </a-drawer>
@@ -648,13 +848,6 @@ onMounted(() => {
                     </a-select-option>
                 </a-select>
             </a-form-item>
-            <a-form-item label="匠人">
-                <a-select v-model:value="form.artisanId" size="large" placeholder="请选择匠人" show-search :filter-option="false">
-                    <a-select-option v-for="item in meta.artisans" :key="item.id" :value="item.id">
-                        {{ formatArtisanLabel(item) }}
-                    </a-select-option>
-                </a-select>
-            </a-form-item>
             <a-form-item label="商品名称">
                 <a-input v-model:value="form.productName" size="large" />
             </a-form-item>
@@ -673,29 +866,123 @@ onMounted(() => {
             <a-form-item label="最高价">
                 <a-input-number v-model:value="form.maxPrice" size="large" :min="0" :controls="false" class="full-width" />
             </a-form-item>
-            <a-form-item label="审核状态">
-                <a-select v-model:value="form.auditStatus" size="large">
-                    <a-select-option :value="-1">草稿</a-select-option>
-                    <a-select-option :value="0">待审核</a-select-option>
-                    <a-select-option :value="1">已通过</a-select-option>
-                    <a-select-option :value="2">已驳回</a-select-option>
-                </a-select>
-            </a-form-item>
             <a-form-item label="上架状态">
                 <a-select v-model:value="form.status" size="large">
-                    <a-select-option :value="0">草稿</a-select-option>
-                    <a-select-option :value="1">上架中</a-select-option>
-                    <a-select-option :value="2">已下架</a-select-option>
+                    <a-select-option :value="1">上架</a-select-option>
+                    <a-select-option :value="0">下架</a-select-option>
                 </a-select>
             </a-form-item>
             <a-form-item label="排序值">
                 <a-input-number v-model:value="form.sortOrder" size="large" :controls="false" class="full-width" />
             </a-form-item>
-            <a-form-item label="支持定制" class="full-span">
-                <a-switch v-model:checked="form.supportCustom" :checked-value="1" :un-checked-value="0" />
-            </a-form-item>
-            <a-form-item label="封面地址" class="full-span">
-                <a-input v-model:value="form.productCover" size="large" />
+            <div class="full-span sku-section">
+                <div class="sku-section-head">
+                    <strong>商品规格</strong>
+                    <a-button type="primary" ghost @click="addSkuRow">
+                        <PlusOutlined />
+                        添加规格
+                    </a-button>
+                </div>
+                <div v-for="(sku, index) in form.skus" :key="index" class="sku-row">
+                    <a-form-item label="规格名称">
+                        <a-input v-model:value="sku.skuName" size="large" placeholder="如 默认规格 / 礼盒装" />
+                    </a-form-item>
+                    <a-form-item label="规格描述">
+                        <a-input v-model:value="sku.specText" size="large" placeholder="如 30cm x 18cm" />
+                    </a-form-item>
+                    <a-form-item label="材质">
+                        <a-input v-model:value="sku.materialType" size="large" />
+                    </a-form-item>
+                    <a-form-item label="重量">
+                        <a-input-number v-model:value="sku.weight" size="large" :min="0" :controls="false" class="full-width" />
+                    </a-form-item>
+                    <a-form-item label="售价">
+                        <a-input-number v-model:value="sku.price" size="large" :min="0" :controls="false" class="full-width" />
+                    </a-form-item>
+                    <a-form-item label="原价">
+                        <a-input-number v-model:value="sku.originalPrice" size="large" :min="0" :controls="false" class="full-width" />
+                    </a-form-item>
+                    <a-form-item label="库存">
+                        <a-input-number v-model:value="sku.stock" size="large" :min="0" :precision="0" :controls="false" class="full-width" />
+                    </a-form-item>
+                    <a-form-item label="状态">
+                        <a-select v-model:value="sku.status" size="large">
+                            <a-select-option :value="1">启用</a-select-option>
+                            <a-select-option :value="0">停用</a-select-option>
+                        </a-select>
+                    </a-form-item>
+                    <a-form-item label="规格图片" class="sku-cover-field">
+                        <div class="image-uploader compact-uploader">
+                            <a-image
+                                v-if="getSkuCoverDisplayUrl(sku)"
+                                class="upload-image-preview small-preview"
+                                :src="getSkuCoverDisplayUrl(sku)"
+                                :alt="sku.skuName || '规格图片'"
+                            />
+                            <div v-else class="empty-image-preview small-preview">暂无图片</div>
+                            <div class="image-upload-actions">
+                                <input
+                                    :ref="(el) => setSkuCoverFileInputRef(el, index)"
+                                    type="file"
+                                    accept="image/*"
+                                    hidden
+                                    aria-hidden="true"
+                                    tabindex="-1"
+                                    class="hidden-file-input"
+                                    @change="handleSkuCoverFileChange($event, index)"
+                                />
+                                <a-space wrap>
+                                    <a-button @click="openSkuCoverPicker(index)">选择图片</a-button>
+                                    <a-button v-if="getSkuCoverDisplayUrl(sku)" danger @click="clearSkuCover(index)">
+                                        <DeleteOutlined />
+                                        清空图片
+                                    </a-button>
+                                </a-space>
+                                <span v-if="sku.pendingCoverFile">{{ sku.pendingCoverFile.name }}</span>
+                                <span v-else-if="sku.skuCover">{{ sku.skuCover }}</span>
+                                <span v-else-if="form.productCover">默认使用商品封面</span>
+                            </div>
+                        </div>
+                    </a-form-item>
+                    <div class="sku-row-action">
+                        <a-button danger @click="removeSkuRow(index)">
+                            <DeleteOutlined />
+                            删除
+                        </a-button>
+                    </div>
+                </div>
+            </div>
+            <a-form-item label="商品封面" class="full-span">
+                <div class="image-uploader">
+                    <a-image
+                        v-if="displayProductCoverUrl"
+                        class="upload-image-preview"
+                        :src="displayProductCoverUrl"
+                        :alt="form.productName || '商品封面'"
+                    />
+                    <div v-else class="empty-image-preview">暂无封面</div>
+                    <div class="image-upload-actions">
+                        <input
+                            ref="coverFileInputRef"
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            aria-hidden="true"
+                            tabindex="-1"
+                            class="hidden-file-input"
+                            @change="handleProductCoverFileChange"
+                        />
+                        <a-space wrap>
+                            <a-button @click="openProductCoverPicker">选择图片</a-button>
+                            <a-button v-if="displayProductCoverUrl" danger @click="clearProductCover">
+                                <DeleteOutlined />
+                                清空封面
+                            </a-button>
+                        </a-space>
+                        <span v-if="pendingCoverFile">{{ pendingCoverFile.name }}</span>
+                        <span v-else-if="form.productCover">{{ form.productCover }}</span>
+                    </div>
+                </div>
             </a-form-item>
             <a-form-item label="工艺类型">
                 <a-input v-model:value="form.craftType" size="large" />
@@ -896,6 +1183,98 @@ onMounted(() => {
     width: 100%;
 }
 
+.image-uploader {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+}
+
+.compact-uploader {
+    grid-template-columns: 104px minmax(0, 1fr);
+}
+
+.upload-image-preview,
+.empty-image-preview {
+    width: 180px;
+    height: 128px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.upload-image-preview {
+    object-fit: cover;
+}
+
+.small-preview {
+    width: 104px;
+    height: 76px;
+}
+
+.empty-image-preview {
+    display: grid;
+    place-items: center;
+    border: 1px dashed rgba(30, 64, 175, 0.24);
+    color: var(--text-muted);
+    background: #f8fafc;
+}
+
+.image-upload-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.image-upload-actions span {
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
+.hidden-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.sku-section {
+    display: grid;
+    gap: 14px;
+    margin: 4px 0 18px;
+}
+
+.sku-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sku-section-head strong {
+    color: var(--text-strong);
+}
+
+.sku-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 12px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.sku-cover-field {
+    grid-column: span 3;
+}
+
+.sku-row-action {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 30px;
+}
+
 @media (max-width: 980px) {
     .summary-panel {
         flex-direction: column;
@@ -909,7 +1288,17 @@ onMounted(() => {
     .toolbar,
     .meta-grid,
     .image-grid,
-    .form-grid {
+    .form-grid,
+    .sku-row {
+        grid-template-columns: 1fr;
+    }
+
+    .sku-cover-field {
+        grid-column: auto;
+    }
+
+    .image-uploader,
+    .compact-uploader {
         grid-template-columns: 1fr;
     }
 

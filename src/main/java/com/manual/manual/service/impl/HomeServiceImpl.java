@@ -2,6 +2,7 @@ package com.manual.manual.service.impl;
 
 import com.manual.manual.mapper.HomeMapper;
 import com.manual.manual.model.vo.home.HomePageVO;
+import com.manual.manual.model.vo.home.HomeProductVO;
 import com.manual.manual.service.HomeService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,12 @@ public class HomeServiceImpl implements HomeService {
     @Override
     public HomePageVO getHomePage() {
         HomePageVO homePageVO = new HomePageVO();
+        List<HomeProductVO> products = defaultList(homeMapper.selectProducts(true));
+        if (products.isEmpty()) {
+            products = defaultList(homeMapper.selectProducts(false));
+        }
         homePageVO.setCategories(defaultList(homeMapper.selectCategories()));
-        homePageVO.setProducts(defaultList(homeMapper.selectProducts()));
-        homePageVO.setArtisans(defaultList(homeMapper.selectArtisans()));
+        homePageVO.setProducts(products);
         homePageVO.setRecentOrders(defaultList(homeMapper.selectRecentOrders()));
         return homePageVO;
     }

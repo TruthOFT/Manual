@@ -69,10 +69,10 @@ function getUserRoleTag(role: string | null | undefined) {
             text: '管理员',
         }
     }
-    if (role === 'artisan') {
+    if (role === 'staff') {
         return {
             color: 'geekblue',
-            text: '匠人',
+            text: '店员',
         }
     }
     return {

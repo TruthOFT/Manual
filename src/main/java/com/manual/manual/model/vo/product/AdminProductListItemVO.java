@@ -15,14 +15,7 @@ public class AdminProductListItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long categoryId;
 
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long artisanId;
-
     private String categoryName;
-
-    private String artisanName;
-
-    private String shopName;
 
     private String productName;
 

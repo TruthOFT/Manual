@@ -2,7 +2,6 @@ package com.manual.manual.model.vo.product;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.manual.manual.model.vo.artisancenter.ArtisanCenterProductSkuVO;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -18,14 +17,7 @@ public class AdminProductDetailVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long categoryId;
 
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long artisanId;
-
     private String categoryName;
-
-    private String artisanName;
-
-    private String shopName;
 
     private String productName;
 
@@ -67,5 +59,5 @@ public class AdminProductDetailVO {
 
     private List<ProductMaterialVO> materials = new ArrayList<>();
 
-    private List<ArtisanCenterProductSkuVO> skus = new ArrayList<>();
+    private List<ProductSkuVO> skus = new ArrayList<>();
 }

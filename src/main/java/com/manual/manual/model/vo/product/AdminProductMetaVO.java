@@ -10,5 +10,4 @@ public class AdminProductMetaVO {
 
     private List<AdminProductCategoryOptionVO> categories = new ArrayList<>();
 
-    private List<AdminProductArtisanOptionVO> artisans = new ArrayList<>();
 }

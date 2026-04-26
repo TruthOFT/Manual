@@ -10,7 +10,7 @@ public interface UserConstant {
 
     String ADMIN_ROLE = "admin";
 
-    String ARTISAN_ROLE = "artisan";
+    String STAFF_ROLE = "staff";
 
     String SALT = "Manual";
 }

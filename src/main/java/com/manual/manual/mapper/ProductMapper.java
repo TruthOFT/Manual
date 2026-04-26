@@ -1,6 +1,7 @@
 package com.manual.manual.mapper;
 
 import com.manual.manual.model.vo.product.ProductDetailVO;
+import com.manual.manual.model.vo.product.ProductFavoriteVO;
 import com.manual.manual.model.vo.product.ProductFilterCategoryVO;
 import com.manual.manual.model.vo.product.ProductImageVO;
 import com.manual.manual.model.vo.product.ProductListItemVO;
@@ -10,6 +11,8 @@ import com.manual.manual.model.vo.product.ProductSkuVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -21,7 +24,6 @@ public interface ProductMapper {
             "select distinct",
             "    p.id,",
             "    p.categoryId,",
-            "    p.artisanId,",
             "    p.productName,",
             "    p.productSubtitle,",
             "    p.productCover,",
@@ -32,21 +34,17 @@ public interface ProductMapper {
             "    p.soldQuantity,",
             "    p.minPrice,",
             "    p.maxPrice,",
-            "    a.artisanName,",
-            "    a.shopName,",
             "    c.categoryName",
             "from product p",
             "inner join category c on c.id = p.categoryId",
-            "inner join artisan_profile a on a.id = p.artisanId",
             "left join product_material pm on pm.productId = p.id and pm.isDelete = 0",
             "where p.isDelete = 0",
-            "  and p.auditStatus = 1",
-            "  and p.status = 1",
             "  and c.isDelete = 0",
             "  and c.isEnable = 1",
-            "  and a.isDelete = 0",
-            "  and a.auditStatus = 1",
-            "  and a.shelfStatus = 1",
+            "<if test='publishedOnly'>",
+            "  and p.auditStatus = 1",
+            "  and p.status = 1",
+            "</if>",
             "<if test='categoryId != null'>",
             "  and p.categoryId = #{categoryId}",
             "</if>",
@@ -61,72 +59,96 @@ public interface ProductMapper {
     })
     List<ProductListItemVO> selectProducts(@Param("categoryId") Long categoryId,
                                            @Param("originPlace") String originPlace,
-                                           @Param("materialName") String materialName);
+                                           @Param("materialName") String materialName,
+                                           @Param("publishedOnly") boolean publishedOnly);
 
     @Select("""
+            select count(1)
+            from product
+            where id = #{productId}
+              and isDelete = 0
+              and auditStatus = 1
+              and status = 1
+            """)
+    int countPublishedProduct(@Param("productId") Long productId);
+
+    @Select({
+            "<script>",
+            """
             select distinct
                 c.id,
                 c.categoryName
             from product p
             inner join category c on c.id = p.categoryId
-            inner join artisan_profile a on a.id = p.artisanId
             where p.isDelete = 0
-              and p.auditStatus = 1
-              and p.status = 1
               and c.isDelete = 0
               and c.isEnable = 1
-              and a.isDelete = 0
-              and a.auditStatus = 1
-              and a.shelfStatus = 1
+            """,
+            "<if test='publishedOnly'>",
+            "  and p.auditStatus = 1",
+            "  and p.status = 1",
+            "</if>",
+            """
             order by c.categoryName asc
-            """)
-    List<ProductFilterCategoryVO> selectFilterCategories();
+            """,
+            "</script>"
+    })
+    List<ProductFilterCategoryVO> selectFilterCategories(@Param("publishedOnly") boolean publishedOnly);
 
-    @Select("""
+    @Select({
+            "<script>",
+            """
             select distinct p.originPlace
             from product p
             inner join category c on c.id = p.categoryId
-            inner join artisan_profile a on a.id = p.artisanId
             where p.isDelete = 0
-              and p.auditStatus = 1
-              and p.status = 1
               and c.isDelete = 0
               and c.isEnable = 1
-              and a.isDelete = 0
-              and a.auditStatus = 1
-              and a.shelfStatus = 1
               and p.originPlace is not null
               and p.originPlace != ''
+            """,
+            "<if test='publishedOnly'>",
+            "  and p.auditStatus = 1",
+            "  and p.status = 1",
+            "</if>",
+            """
             order by p.originPlace asc
-            """)
-    List<String> selectFilterOriginPlaces();
+            """,
+            "</script>"
+    })
+    List<String> selectFilterOriginPlaces(@Param("publishedOnly") boolean publishedOnly);
 
-    @Select("""
+    @Select({
+            "<script>",
+            """
             select distinct pm.materialName
             from product_material pm
             inner join product p on p.id = pm.productId
             inner join category c on c.id = p.categoryId
-            inner join artisan_profile a on a.id = p.artisanId
             where pm.isDelete = 0
               and p.isDelete = 0
-              and p.auditStatus = 1
-              and p.status = 1
               and c.isDelete = 0
               and c.isEnable = 1
-              and a.isDelete = 0
-              and a.auditStatus = 1
-              and a.shelfStatus = 1
               and pm.materialName is not null
               and pm.materialName != ''
+            """,
+            "<if test='publishedOnly'>",
+            "  and p.auditStatus = 1",
+            "  and p.status = 1",
+            "</if>",
+            """
             order by pm.materialName asc
-            """)
-    List<String> selectFilterMaterials();
+            """,
+            "</script>"
+    })
+    List<String> selectFilterMaterials(@Param("publishedOnly") boolean publishedOnly);
 
-    @Select("""
+    @Select({
+            "<script>",
+            """
             select
                 p.id,
                 p.categoryId,
-                p.artisanId,
                 p.productName,
                 p.productSubtitle,
                 p.productCover,
@@ -141,25 +163,25 @@ public interface ProductMapper {
                 p.reviewCount,
                 p.minPrice,
                 p.maxPrice,
-                c.categoryName,
-                a.artisanName,
-                a.shopName,
-                a.artisanAvatar
+                c.categoryName
             from product p
             inner join category c on c.id = p.categoryId
-            inner join artisan_profile a on a.id = p.artisanId
             where p.id = #{productId}
               and p.isDelete = 0
-              and p.auditStatus = 1
-              and p.status = 1
               and c.isDelete = 0
               and c.isEnable = 1
-              and a.isDelete = 0
-              and a.auditStatus = 1
-              and a.shelfStatus = 1
+            """,
+            "<if test='publishedOnly'>",
+            "  and p.auditStatus = 1",
+            "  and p.status = 1",
+            "</if>",
+            """
             limit 1
-            """)
-    ProductDetailVO selectProductDetail(@Param("productId") Long productId);
+            """,
+            "</script>"
+    })
+    ProductDetailVO selectProductDetail(@Param("productId") Long productId,
+                                        @Param("publishedOnly") boolean publishedOnly);
 
     @Select("""
             select
@@ -225,4 +247,123 @@ public interface ProductMapper {
             order by createTime desc, id desc
             """)
     List<ProductReviewVO> selectProductReviews(@Param("productId") Long productId);
+
+    @Select("""
+            select count(1)
+            from product_favorite
+            where userId = #{userId}
+              and productId = #{productId}
+              and isDelete = 0
+            """)
+    int countUserFavorite(@Param("userId") Long userId,
+                          @Param("productId") Long productId);
+
+    @Select("""
+            select count(1)
+            from product_favorite
+            where userId = #{userId}
+              and productId = #{productId}
+            """)
+    int countUserFavoriteRecord(@Param("userId") Long userId,
+                                @Param("productId") Long productId);
+
+    @Select("""
+            select id
+            from product_favorite
+            where userId = #{userId}
+              and productId = #{productId}
+            limit 1
+            """)
+    Long selectFavoriteId(@Param("userId") Long userId,
+                          @Param("productId") Long productId);
+
+    @Insert("""
+            insert into product_favorite (
+                id,
+                userId,
+                productId,
+                createTime,
+                updateTime,
+                isDelete
+            ) values (
+                #{id},
+                #{userId},
+                #{productId},
+                now(),
+                now(),
+                0
+            )
+            """)
+    int insertFavorite(@Param("id") Long id,
+                       @Param("userId") Long userId,
+                       @Param("productId") Long productId);
+
+    @Update("""
+            update product_favorite
+            set isDelete = 0,
+                updateTime = now()
+            where userId = #{userId}
+              and productId = #{productId}
+            """)
+    int restoreFavorite(@Param("userId") Long userId,
+                        @Param("productId") Long productId);
+
+    @Update("""
+            update product_favorite
+            set isDelete = 1,
+                updateTime = now()
+            where userId = #{userId}
+              and productId = #{productId}
+              and isDelete = 0
+            """)
+    int deleteFavorite(@Param("userId") Long userId,
+                       @Param("productId") Long productId);
+
+    @Update("""
+            update product
+            set favoriteCount = favoriteCount + 1,
+                updateTime = now()
+            where id = #{productId}
+              and isDelete = 0
+            """)
+    int increaseFavoriteCount(@Param("productId") Long productId);
+
+    @Update("""
+            update product
+            set favoriteCount = case
+                    when favoriteCount > 0 then favoriteCount - 1
+                    else 0
+                end,
+                updateTime = now()
+            where id = #{productId}
+              and isDelete = 0
+            """)
+    int decreaseFavoriteCount(@Param("productId") Long productId);
+
+    @Select("""
+            select
+                pf.id,
+                pf.productId,
+                p.productName,
+                p.productSubtitle,
+                p.productCover,
+                p.craftType,
+                p.originPlace,
+                p.minPrice,
+                p.maxPrice,
+                c.categoryName,
+                date_format(pf.createTime, '%Y-%m-%d %H:%i') as createTime
+            from product_favorite pf
+            inner join product p on p.id = pf.productId
+            inner join category c on c.id = p.categoryId
+            where pf.userId = #{userId}
+              and pf.isDelete = 0
+              and p.isDelete = 0
+              and p.auditStatus = 1
+              and p.status = 1
+              and c.isDelete = 0
+              and c.isEnable = 1
+            order by pf.updateTime desc, pf.id desc
+            """)
+    List<ProductFavoriteVO> selectUserFavorites(@Param("userId") Long userId);
 }

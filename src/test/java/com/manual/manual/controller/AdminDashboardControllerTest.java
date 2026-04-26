@@ -34,7 +34,7 @@ class AdminDashboardControllerTest {
         overviewVO.setPendingOrderCount(27L);
         overviewVO.setPendingShipmentOrderCount(21L);
         overviewVO.setAbnormalAddressOrderCount(6L);
-        overviewVO.setActiveArtisanCount(46L);
+        overviewVO.setActiveCustomerCount(46L);
         overviewVO.setRiskAlertCount(5L);
         overviewVO.setLowStockRiskCount(2L);
         overviewVO.setRefundAlertCount(1L);

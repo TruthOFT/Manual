@@ -10,6 +10,8 @@ import {
     getAdminCategoryDetail,
     updateAdminCategory,
 } from '@/api/category'
+import { API_CONTEXT_PATH, BASE_URL } from '@/api/request'
+import { uploadFile } from '@/api/upload'
 import type { AdminCategory, AdminCategorySaveRequest } from '@/types/category'
 
 const columns = [
@@ -34,6 +36,9 @@ const currentEditId = ref('')
 const currentCategory = ref<AdminCategory | null>(null)
 const categories = ref<AdminCategory[]>([])
 const displaySavingIds = ref(new Set<string>())
+const iconFileInputRef = ref<HTMLInputElement>()
+const pendingIconFile = ref<File | null>(null)
+const iconPreviewUrl = ref('')
 
 const form = reactive({
     parentId: undefined as string | undefined,
@@ -49,8 +54,10 @@ const modalTitle = computed(() => (isEditMode.value ? '编辑分类' : '新增�
 const parentOptions = computed(() =>
     categories.value.filter((item) => item.categoryLevel === 1 && item.id !== currentEditId.value),
 )
+const displayIconUrl = computed(() => iconPreviewUrl.value || resolveImageUrl(form.categoryIcon))
 
 function resetForm() {
+    revokeIconPreview()
     form.parentId = undefined
     form.categoryName = ''
     form.categoryIcon = ''
@@ -61,6 +68,75 @@ function resetForm() {
     currentEditId.value = ''
     isEditMode.value = false
     formRef.value?.clearValidate()
+}
+
+function resolveImageUrl(url?: string | null) {
+    if (!url) {
+        return ''
+    }
+    const value = String(url).trim()
+    if (!value) {
+        return ''
+    }
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+        return value
+    }
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+        return value
+    }
+    const normalizedPath = value.startsWith('/') ? value : `/${value}`
+    if (normalizedPath.startsWith(`${API_CONTEXT_PATH}/`)) {
+        return `${BASE_URL}${normalizedPath}`
+    }
+    if (normalizedPath.startsWith('/upload/')) {
+        return `${BASE_URL}${API_CONTEXT_PATH}${normalizedPath}`
+    }
+    return `${BASE_URL}${normalizedPath}`
+}
+
+function revokeIconPreview() {
+    if (iconPreviewUrl.value) {
+        URL.revokeObjectURL(iconPreviewUrl.value)
+    }
+    iconPreviewUrl.value = ''
+    pendingIconFile.value = null
+    if (iconFileInputRef.value) {
+        iconFileInputRef.value.value = ''
+    }
+}
+
+function openIconPicker() {
+    iconFileInputRef.value?.click()
+}
+
+function handleIconFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) {
+        return
+    }
+    if (!file.type.startsWith('image/')) {
+        message.warning('请选择图片文件')
+        input.value = ''
+        return
+    }
+    if (file.size > 100 * 1024 * 1024) {
+        message.warning('图片不能超过 100M')
+        input.value = ''
+        return
+    }
+    if (iconPreviewUrl.value) {
+        URL.revokeObjectURL(iconPreviewUrl.value)
+    }
+    pendingIconFile.value = file
+    iconPreviewUrl.value = URL.createObjectURL(file)
+}
+
+async function resolveCategoryIcon() {
+    if (!pendingIconFile.value) {
+        return form.categoryIcon || undefined
+    }
+    return uploadFile('category', pendingIconFile.value)
 }
 
 function getLevelText(level: number) {
@@ -135,6 +211,7 @@ async function openEditModal(id: string) {
         form.parentId = detail.parentId || undefined
         form.categoryName = detail.categoryName
         form.categoryIcon = detail.categoryIcon || ''
+        revokeIconPreview()
         form.categoryDesc = detail.categoryDesc || ''
         form.categoryLevel = detail.categoryLevel
         form.sortOrder = detail.sortOrder ?? 0
@@ -189,7 +266,7 @@ async function handleSave() {
         const payload: AdminCategorySaveRequest = {
             parentId: form.categoryLevel === 2 ? form.parentId : undefined,
             categoryName: form.categoryName,
-            categoryIcon: form.categoryIcon || undefined,
+            categoryIcon: await resolveCategoryIcon(),
             categoryDesc: form.categoryDesc || undefined,
             categoryLevel: form.categoryLevel,
             sortOrder: form.sortOrder,
@@ -356,8 +433,34 @@ onMounted(() => {
                 </a-select>
             </a-form-item>
 
-            <a-form-item label="分类图标地址" name="categoryIcon" class="span-2">
-                <a-input v-model:value="form.categoryIcon" size="large" />
+            <a-form-item label="分类图标" name="categoryIcon" class="span-2">
+                <div class="icon-uploader">
+                    <a-image
+                        v-if="displayIconUrl"
+                        class="category-icon-edit-preview"
+                        :src="displayIconUrl"
+                        :alt="form.categoryName || '分类图标'"
+                    />
+                    <div v-else class="empty-icon-preview">暂无图标</div>
+                    <div class="icon-upload-actions">
+                        <input
+                            ref="iconFileInputRef"
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            aria-hidden="true"
+                            tabindex="-1"
+                            class="hidden-file-input"
+                            @change="handleIconFileChange"
+                        />
+                        <a-space wrap>
+                            <a-button @click="openIconPicker">选择图片</a-button>
+                            <a-button v-if="pendingIconFile" @click="revokeIconPreview">取消选择</a-button>
+                        </a-space>
+                        <span v-if="pendingIconFile">{{ pendingIconFile.name }}</span>
+                        <span v-else-if="form.categoryIcon">{{ form.categoryIcon }}</span>
+                    </div>
+                </div>
             </a-form-item>
 
             <a-form-item label="分类描述" name="categoryDesc" class="span-2">
@@ -401,7 +504,7 @@ onMounted(() => {
                 <a-image
                     v-if="currentCategory.categoryIcon"
                     class="category-icon-preview"
-                    :src="currentCategory.categoryIcon"
+                    :src="resolveImageUrl(currentCategory.categoryIcon)"
                     :alt="currentCategory.categoryName"
                 />
                 <span v-else>-</span>
@@ -461,6 +564,52 @@ onMounted(() => {
     border-radius: 8px;
 }
 
+.icon-uploader {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+}
+
+.category-icon-edit-preview {
+    width: 140px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.empty-icon-preview {
+    display: grid;
+    place-items: center;
+    width: 140px;
+    height: 100px;
+    border: 1px dashed rgba(30, 64, 175, 0.24);
+    border-radius: 10px;
+    color: var(--text-muted);
+    background: #f8fafc;
+}
+
+.icon-upload-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.icon-upload-actions span {
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
+.hidden-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
 @media (max-width: 900px) {
     .form-grid {
         grid-template-columns: 1fr;
@@ -468,6 +617,10 @@ onMounted(() => {
 
     .span-2 {
         grid-column: auto;
+    }
+
+    .icon-uploader {
+        grid-template-columns: 1fr;
     }
 }
 </style>

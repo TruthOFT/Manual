@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getProductList } from '@/api/product'
+import { resolveUploadUrl } from '@/api/upload'
 import LandingNav from '@/components/layout/LandingNav.vue'
 import type { ProductListPageData } from '@/types/product'
 
@@ -41,21 +42,16 @@ function normalizeCategoryId(categoryId: unknown) {
     if (Array.isArray(categoryId)) {
         return typeof categoryId[0] === 'string' ? categoryId[0] : ''
     }
-
     return typeof categoryId === 'string' ? categoryId : ''
 }
 
 async function syncCategoryQuery(categoryId: string) {
-    const nextQuery = {
-        ...route.query,
-    }
-
+    const nextQuery = { ...route.query }
     if (categoryId) {
         nextQuery.categoryId = categoryId
     } else {
         delete nextQuery.categoryId
     }
-
     await router.replace({
         name: 'products',
         query: nextQuery,
@@ -80,15 +76,6 @@ function goToProductDetail(productId: string) {
         name: 'product-detail',
         params: {
             id: productId,
-        },
-    })
-}
-
-function goToArtisanDetail(artisanId: string) {
-    void router.push({
-        name: 'artisan-detail',
-        params: {
-            id: artisanId,
         },
     })
 }
@@ -122,8 +109,12 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
 
         <section class="shell section">
             <div class="filter-toggle-bar">
-                <a-button class="manual-ant-btn manual-ant-btn-soft" size="large" :aria-expanded="filtersVisible"
-                    @click="toggleFiltersVisible">
+                <a-button
+                    class="manual-ant-btn manual-ant-btn-soft"
+                    size="large"
+                    :aria-expanded="filtersVisible"
+                    @click="toggleFiltersVisible"
+                >
                     过滤
                 </a-button>
             </div>
@@ -134,8 +125,11 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
                         <span>分类</span>
                         <a-select v-model:value="selectedCategoryId" @change="handleCategoryChange">
                             <a-select-option value="">全部分类</a-select-option>
-                            <a-select-option v-for="category in filterOptions.categories" :key="category.id"
-                                :value="category.id">
+                            <a-select-option
+                                v-for="category in filterOptions.categories"
+                                :key="category.id"
+                                :value="category.id"
+                            >
                                 {{ category.categoryName }}
                             </a-select-option>
                         </a-select>
@@ -145,8 +139,7 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
                         <span>产地</span>
                         <a-select v-model:value="selectedOriginPlace" @change="loadProducts">
                             <a-select-option value="">全部产地</a-select-option>
-                            <a-select-option v-for="originPlace in filterOptions.originPlaces" :key="originPlace"
-                                :value="originPlace">
+                            <a-select-option v-for="originPlace in filterOptions.originPlaces" :key="originPlace" :value="originPlace">
                                 {{ originPlace }}
                             </a-select-option>
                         </a-select>
@@ -156,8 +149,7 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
                         <span>材料类型</span>
                         <a-select v-model:value="selectedMaterialName" @change="loadProducts">
                             <a-select-option value="">全部材料</a-select-option>
-                            <a-select-option v-for="material in filterOptions.materials" :key="material"
-                                :value="material">
+                            <a-select-option v-for="material in filterOptions.materials" :key="material" :value="material">
                                 {{ material }}
                             </a-select-option>
                         </a-select>
@@ -173,14 +165,12 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
                 <a-col v-for="product in products" :key="product.id" :xs="24" :lg="8">
                     <a-card class="soft-card product-card" hoverable @click="goToProductDetail(product.id)">
                         <template #cover>
-                            <a-image :preview="false" :src="product.productCover" :alt="product.productName" />
+                            <a-image :preview="false" :src="resolveUploadUrl(product.productCover)" :alt="product.productName" />
                         </template>
 
                         <div class="product-top">
                             <a-tag color="orange">{{ product.categoryName }}</a-tag>
-                            <a-tag :color="product.supportCustom ? 'green' : 'default'">
-                                {{ product.supportCustom ? '支持定制' : '现货零售' }}
-                            </a-tag>
+                            <a-tag>{{ product.craftType }}</a-tag>
                         </div>
 
                         <h3>{{ product.productName }}</h3>
@@ -193,14 +183,11 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
                         </a-space>
 
                         <div class="product-foot">
-                            <button class="text-link" type="button" @click.stop="goToArtisanDetail(product.artisanId)">
-                                {{ product.shopName }} / {{ product.artisanName }}
-                            </button>
+                            <span class="text-link">{{ product.categoryName }}</span>
                             <strong>{{ getPriceRange(product.minPrice, product.maxPrice) }}</strong>
                         </div>
 
-                        <a-button class="manual-ant-btn manual-ant-btn-ghost"
-                            @click.stop="goToProductDetail(product.id)">
+                        <a-button class="manual-ant-btn manual-ant-btn-ghost" @click.stop="goToProductDetail(product.id)">
                             查看详情
                         </a-button>
                     </a-card>

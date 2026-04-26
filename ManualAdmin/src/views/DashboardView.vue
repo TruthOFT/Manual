@@ -19,7 +19,7 @@ const emptyOverview: AdminDashboardOverview = {
     pendingOrderCount: 0,
     pendingShipmentOrderCount: 0,
     abnormalAddressOrderCount: 0,
-    activeArtisanCount: 0,
+    activeCustomerCount: 0,
     riskAlertCount: 0,
     lowStockRiskCount: 0,
     refundAlertCount: 0,
@@ -35,13 +35,6 @@ const overview = ref<AdminDashboardOverview>(emptyOverview)
 
 const metrics = computed(() => [
     {
-        label: '\u5f85\u5ba1\u6838\u5546\u54c1',
-        value: formatCount(overview.value.pendingAuditProductCount),
-        note: '\u9700\u8981\u7ba1\u7406\u5458\u786e\u8ba4\u4e0a\u67b6\u8d28\u91cf\u4e0e\u4fe1\u606f\u5b8c\u6574\u5ea6\u3002',
-        detail: `\u5f53\u524d\u5171\u6709 ${formatCount(overview.value.pendingAuditProductCount)} \u4ef6\u5546\u54c1\u7b49\u5f85\u5ba1\u6838\u3002`,
-        color: '#2f6fe4',
-    },
-    {
         label: '\u5f85\u5904\u7406\u8ba2\u5355',
         value: formatCount(overview.value.pendingOrderCount),
         note: '\u4f18\u5148\u5173\u6ce8\u8d85\u65f6\u672a\u53d1\u8d27\u548c\u5730\u5740\u5f02\u5e38\u8ba2\u5355\u3002',
@@ -49,10 +42,10 @@ const metrics = computed(() => [
         color: '#17a36b',
     },
     {
-        label: '\u6d3b\u8dc3\u5320\u4eba',
-        value: formatCount(overview.value.activeArtisanCount),
-        note: '\u8fd1 7 \u5929\u81f3\u5c11\u4e0a\u65b0\u6216\u5904\u7406\u8ba2\u5355\u4e00\u6b21\u3002',
-        detail: '\u6309\u8fd1 7 \u5929\u5546\u54c1\u66f4\u65b0\u6216\u8ba2\u5355\u5904\u7406\u8bb0\u5f55\u5b9e\u65f6\u7edf\u8ba1\u3002',
+        label: '\u6d3b\u8dc3\u987e\u5ba2',
+        value: formatCount(overview.value.activeCustomerCount),
+        note: '\u8fd1 7 \u5929\u6709\u4e0b\u5355\u884c\u4e3a\u7684\u987e\u5ba2\u6570\u3002',
+        detail: '\u6309\u8fd1 7 \u5929\u8ba2\u5355\u521b\u5efa\u8bb0\u5f55\u5b9e\u65f6\u7edf\u8ba1\u3002',
         color: '#f0a22e',
     },
     {
@@ -65,12 +58,6 @@ const metrics = computed(() => [
 ])
 
 const todoItems = computed(() => [
-    {
-        title: '\u5546\u54c1\u5ba1\u6838',
-        owner: `${formatCount(overview.value.pendingAuditProductCount)} \u4ef6\u5f85\u5904\u7406`,
-        tagText: '\u5b9e\u65f6',
-        tagColor: 'blue',
-    },
     {
         title: '\u5f85\u53d1\u8d27\u8ba2\u5355',
         owner: `${formatCount(overview.value.pendingShipmentOrderCount)} \u5355\u5f85\u8ddf\u8fdb`,
@@ -244,7 +231,7 @@ onMounted(() => {
 }
 
 .stats-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .content-grid {

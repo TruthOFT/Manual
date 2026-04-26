@@ -20,7 +20,6 @@ export type FavoriteItem = {
     productCover: string
     priceText: string
     craftType: string
-    shopName: string
 }
 
 export type AddressItem = {
@@ -36,12 +35,12 @@ export const profileStats: ProfileStat[] = [
     {
         label: '待收货订单',
         value: '3',
-        note: '本周有 2 单定制礼盒正在发货中。',
+        note: '近期订单正在配送中，可在订单页查看物流进度。',
     },
     {
         label: '收藏作品',
         value: '12',
-        note: '陶艺器皿和布艺礼盒关注度最高。',
+        note: '陶艺器皿和布艺礼品关注度最高。',
     },
     {
         label: '常用地址',
@@ -87,7 +86,6 @@ export const favoriteItems: FavoriteItem[] = [
         productCover: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&q=80',
         priceText: 'CNY 168 - 228',
         craftType: '手捏陶艺',
-        shopName: '柔光工坊',
     },
     {
         id: 2,
@@ -95,7 +93,6 @@ export const favoriteItems: FavoriteItem[] = [
         productCover: 'https://images.unsplash.com/photo-1511988617509-a57c8a288659?auto=format&fit=crop&w=900&q=80',
         priceText: 'CNY 239 - 299',
         craftType: '手工织物',
-        shopName: '织序工作室',
     },
     {
         id: 3,
@@ -103,7 +100,6 @@ export const favoriteItems: FavoriteItem[] = [
         productCover: 'https://images.unsplash.com/photo-1602872029708-84d970d338d4?auto=format&fit=crop&w=900&q=80',
         priceText: 'CNY 128 - 168',
         craftType: '香氛手作',
-        shopName: '雾屿香气',
     },
 ]
 

@@ -56,9 +56,7 @@ async function handleSubmit() {
         userStore.setCurrentUser(loginUserInfo)
         const redirect = typeof route.query.redirect === 'string' && route.query.redirect.length > 0
             ? route.query.redirect
-            : loginUserInfo.userRole === 'artisan'
-                ? '/artisan'
-                : '/profile'
+            : '/profile'
         await router.push(redirect)
     } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '登录失败，请稍后重试。'
@@ -76,7 +74,7 @@ async function handleSubmit() {
         <section class="auth-shell">
             <a-card class="story-card" :bordered="false">
                 <p class="eyebrow">门店账号登录</p>
-                <h1>把匠人、商品、订单和门店运营都收进同一个有温度的系统里。</h1>
+                <h1>把门店、商品、订单和门店运营都收进同一个有温度的系统里。</h1>
                 <p class="lead">
                     登录后即可继续管理精选商品、门店数据和运营状态，当前页面结构也已经和后续后端接口保持对接方向一致。
                 </p>

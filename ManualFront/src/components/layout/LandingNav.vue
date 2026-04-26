@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-    AppstoreOutlined,
-    DownOutlined,
-    LogoutOutlined,
-    SettingOutlined,
-    SolutionOutlined,
-    UserOutlined,
-} from '@ant-design/icons-vue'
+import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -14,28 +7,15 @@ import { useUserStore } from '@/stores/user'
 
 const navItems = [
     { label: '首页', to: '/' },
-    { label: '精选商品', to: '/products' },
-    { label: '匠人故事', to: '/artisans' },
-    { label: '定制服务', to: '/custom' },
+    { label: '商品', to: '/products' },
 ]
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const displayName = computed(
-    () => userStore.currentUser?.username || userStore.currentUser?.userAccount || '手作用户',
-)
-const showArtisanApply = computed(() => userStore.currentUser?.userRole === 'user')
+const displayName = computed(() => userStore.currentUser?.username || userStore.currentUser?.userAccount || '手作用户')
 
 async function handleMenuClick({ key }: { key: string }) {
-    if (key === 'artisan') {
-        await router.push('/artisan')
-        return
-    }
-    if (key === 'artisan-apply') {
-        await router.push('/profile/artisan-application')
-        return
-    }
     if (key === 'profile') {
         await router.push('/profile')
         return
@@ -81,14 +61,6 @@ async function handleMenuClick({ key }: { key: string }) {
                     </button>
                     <template #overlay>
                         <a-menu @click="handleMenuClick">
-                            <a-menu-item v-if="userStore.currentUser?.userRole === 'artisan'" key="artisan">
-                                <AppstoreOutlined />
-                                <span>匠人工作台</span>
-                            </a-menu-item>
-                            <a-menu-item v-if="showArtisanApply" key="artisan-apply">
-                                <SolutionOutlined />
-                                <span>申请成为匠人</span>
-                            </a-menu-item>
                             <a-menu-item key="profile">
                                 <UserOutlined />
                                 <span>个人中心</span>

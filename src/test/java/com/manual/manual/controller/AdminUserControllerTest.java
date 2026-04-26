@@ -60,7 +60,7 @@ class AdminUserControllerTest {
     void shouldReturnUserDetail() throws Exception {
         AdminUserVO userVO = new AdminUserVO();
         userVO.setId(3100000000000001002L);
-        userVO.setUserAccount("artisan_lu");
+        userVO.setUserAccount("staff_lu");
         userVO.setUserName("陆青禾");
 
         when(userService.getAdminUser(eq(3100000000000001002L), any())).thenReturn(userVO);
@@ -68,7 +68,7 @@ class AdminUserControllerTest {
         mockMvc.perform(get("/admin/users/3100000000000001002").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.userAccount").value("artisan_lu"))
+                .andExpect(jsonPath("$.data.userAccount").value("staff_lu"))
                 .andExpect(jsonPath("$.data.userName").value("陆青禾"));
     }
 

@@ -39,34 +39,33 @@ class ProductControllerTest {
         ProductFilterOptionsVO filtersVO = new ProductFilterOptionsVO();
         ProductFilterCategoryVO categoryVO = new ProductFilterCategoryVO();
         categoryVO.setId(3100000000000003005L);
-        categoryVO.setCategoryName("茶器杯具");
+        categoryVO.setCategoryName("陶瓷器皿");
         filtersVO.setCategories(List.of(categoryVO));
         filtersVO.setOriginPlaces(List.of("景德镇"));
-        filtersVO.setMaterials(List.of("高白泥"));
+        filtersVO.setMaterials(List.of("陶土"));
         pageVO.setFilters(filtersVO);
 
         ProductListItemVO productVO = new ProductListItemVO();
         productVO.setId(3100000000000004001L);
         productVO.setCategoryId(3100000000000003005L);
-        productVO.setArtisanId(3100000000000002001L);
-        productVO.setProductName("柴烧釉陶马克杯");
-        productVO.setCategoryName("茶器杯具");
+        productVO.setProductName("暮色手作茶杯");
+        productVO.setCategoryName("陶瓷器皿");
         pageVO.setProducts(List.of(productVO));
 
-        when(productService.listProducts(eq(3100000000000003005L), eq("景德镇"), eq("高白泥"))).thenReturn(pageVO);
+        when(productService.listProducts(eq(3100000000000003005L), eq("景德镇"), eq("陶土"))).thenReturn(pageVO);
 
         mockMvc.perform(get("/products")
                         .param("categoryId", "3100000000000003005")
                         .param("originPlace", "景德镇")
-                        .param("materialName", "高白泥")
+                        .param("materialName", "陶土")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.filters.categories[0].categoryName").value("茶器杯具"))
+                .andExpect(jsonPath("$.data.filters.categories[0].categoryName").value("陶瓷器皿"))
                 .andExpect(jsonPath("$.data.filters.originPlaces[0]").value("景德镇"))
-                .andExpect(jsonPath("$.data.filters.materials[0]").value("高白泥"))
-                .andExpect(jsonPath("$.data.products[0].productName").value("柴烧釉陶马克杯"));
+                .andExpect(jsonPath("$.data.filters.materials[0]").value("陶土"))
+                .andExpect(jsonPath("$.data.products[0].productName").value("暮色手作茶杯"));
     }
 
     @Test
@@ -87,14 +86,13 @@ class ProductControllerTest {
     void shouldReturnProductDetail() throws Exception {
         ProductDetailVO detailVO = new ProductDetailVO();
         detailVO.setId(3100000000000004001L);
-        detailVO.setProductName("柴烧釉陶马克杯");
-        detailVO.setCategoryName("茶器杯具");
-        detailVO.setArtisanName("陆青禾");
+        detailVO.setProductName("暮色手作茶杯");
+        detailVO.setCategoryName("陶瓷器皿");
         detailVO.setMinPrice(new BigDecimal("89.00"));
 
         ProductMaterialVO materialVO = new ProductMaterialVO();
         materialVO.setId(1L);
-        materialVO.setMaterialName("高白泥");
+        materialVO.setMaterialName("陶土");
         detailVO.setMaterials(List.of(materialVO));
 
         when(productService.getProductDetail(3100000000000004001L)).thenReturn(detailVO);
@@ -103,9 +101,8 @@ class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.productName").value("柴烧釉陶马克杯"))
-                .andExpect(jsonPath("$.data.categoryName").value("茶器杯具"))
-                .andExpect(jsonPath("$.data.artisanName").value("陆青禾"))
-                .andExpect(jsonPath("$.data.materials[0].materialName").value("高白泥"));
+                .andExpect(jsonPath("$.data.productName").value("暮色手作茶杯"))
+                .andExpect(jsonPath("$.data.categoryName").value("陶瓷器皿"))
+                .andExpect(jsonPath("$.data.materials[0].materialName").value("陶土"));
     }
 }

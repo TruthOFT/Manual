@@ -1,13 +1,13 @@
 package com.manual.manual.mapper;
 
 import com.manual.manual.model.dto.product.AdminProductSaveRequest;
-import com.manual.manual.model.vo.artisancenter.ArtisanCenterProductSkuVO;
-import com.manual.manual.model.vo.product.AdminProductArtisanOptionVO;
+import com.manual.manual.model.dto.product.AdminProductSkuSaveRequest;
 import com.manual.manual.model.vo.product.AdminProductCategoryOptionVO;
 import com.manual.manual.model.vo.product.AdminProductDetailVO;
 import com.manual.manual.model.vo.product.AdminProductListItemVO;
 import com.manual.manual.model.vo.product.ProductImageVO;
 import com.manual.manual.model.vo.product.ProductMaterialVO;
+import com.manual.manual.model.vo.product.ProductSkuVO;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -34,31 +34,12 @@ public interface AdminProductMapper {
             """)
     List<AdminProductCategoryOptionVO> selectAdminProductCategories();
 
-    @Select("""
-            select
-                a.id,
-                a.userId,
-                a.artisanName,
-                a.shopName,
-                u.userAccount,
-                u.userName
-            from artisan_profile a
-            inner join users u on u.id = a.userId and u.isDelete = 0
-            where a.isDelete = 0
-              and a.auditStatus = 1
-            order by a.updateTime desc, a.id desc
-            """)
-    List<AdminProductArtisanOptionVO> selectAdminProductArtisans();
-
     @Select({
             "<script>",
             "select",
             "    p.id,",
             "    p.categoryId,",
-            "    p.artisanId,",
             "    c.categoryName,",
-            "    a.artisanName,",
-            "    a.shopName,",
             "    p.productName,",
             "    p.productSubtitle,",
             "    p.productCover,",
@@ -71,18 +52,23 @@ public interface AdminProductMapper {
             "    date_format(p.updateTime, '%Y-%m-%d %H:%i') as updateTime",
             "from product p",
             "left join category c on c.id = p.categoryId and c.isDelete = 0",
-            "left join artisan_profile a on a.id = p.artisanId and a.isDelete = 0",
             "where p.isDelete = 0",
             "<if test='auditStatus != null'>",
             "  and p.auditStatus = #{auditStatus}",
             "</if>",
             "<if test='status != null'>",
-            "  and p.status = #{status}",
+            "  <choose>",
+            "    <when test='status == 0'>",
+            "      and p.status in (0, 2)",
+            "    </when>",
+            "    <otherwise>",
+            "      and p.status = #{status}",
+            "    </otherwise>",
+            "  </choose>",
             "</if>",
             "<if test='keyword != null and keyword != \"\"'>",
             "  and (p.productName like concat('%', #{keyword}, '%')",
             "       or p.productSubtitle like concat('%', #{keyword}, '%')",
-            "       or a.artisanName like concat('%', #{keyword}, '%')",
             "       or c.categoryName like concat('%', #{keyword}, '%'))",
             "</if>",
             "order by case when p.auditStatus = 0 then 0 else 1 end asc, p.updateTime desc, p.id desc",
@@ -96,10 +82,7 @@ public interface AdminProductMapper {
             select
                 p.id,
                 p.categoryId,
-                p.artisanId,
                 c.categoryName,
-                a.artisanName,
-                a.shopName,
                 p.productName,
                 p.productSubtitle,
                 p.productCover,
@@ -120,7 +103,6 @@ public interface AdminProductMapper {
                 p.maxPrice
             from product p
             left join category c on c.id = p.categoryId and c.isDelete = 0
-            left join artisan_profile a on a.id = p.artisanId and a.isDelete = 0
             where p.id = #{productId}
               and p.isDelete = 0
             limit 1
@@ -170,7 +152,7 @@ public interface AdminProductMapper {
               and isDelete = 0
             order by id asc
             """)
-    List<ArtisanCenterProductSkuVO> selectProductSkus(@Param("productId") Long productId);
+    List<ProductSkuVO> selectProductSkus(@Param("productId") Long productId);
 
     @Select("""
             select count(1)
@@ -181,20 +163,10 @@ public interface AdminProductMapper {
             """)
     int countEnabledCategoryById(@Param("categoryId") Long categoryId);
 
-    @Select("""
-            select count(1)
-            from artisan_profile
-            where id = #{artisanId}
-              and isDelete = 0
-              and auditStatus = 1
-            """)
-    int countEnabledArtisanById(@Param("artisanId") Long artisanId);
-
     @Insert("""
             insert into product (
                 id,
                 categoryId,
-                artisanId,
                 productName,
                 productSubtitle,
                 productCover,
@@ -219,7 +191,6 @@ public interface AdminProductMapper {
             ) values (
                 #{productId},
                 #{request.categoryId},
-                #{request.artisanId},
                 #{request.productName},
                 #{request.productSubtitle},
                 #{request.productCover},
@@ -249,7 +220,6 @@ public interface AdminProductMapper {
     @Update("""
             update product
             set categoryId = #{request.categoryId},
-                artisanId = #{request.artisanId},
                 productName = #{request.productName},
                 productSubtitle = #{request.productSubtitle},
                 productCover = #{request.productCover},
@@ -307,6 +277,47 @@ public interface AdminProductMapper {
               and isDelete = 0
             """)
     int deleteAdminProductSkus(@Param("productId") Long productId);
+
+    @Insert("""
+            insert into product_sku (
+                id,
+                productId,
+                skuCode,
+                skuName,
+                skuCover,
+                specText,
+                materialType,
+                weight,
+                price,
+                originalPrice,
+                stock,
+                lockedStock,
+                status,
+                createTime,
+                updateTime,
+                isDelete
+            ) values (
+                #{skuId},
+                #{productId},
+                #{sku.skuCode},
+                #{sku.skuName},
+                #{sku.skuCover},
+                #{sku.specText},
+                #{sku.materialType},
+                #{sku.weight},
+                #{sku.price},
+                #{sku.originalPrice},
+                #{sku.stock},
+                0,
+                #{sku.status},
+                now(),
+                now(),
+                0
+            )
+            """)
+    int insertAdminProductSku(@Param("skuId") Long skuId,
+                              @Param("productId") Long productId,
+                              @Param("sku") AdminProductSkuSaveRequest sku);
 
     @Update("""
             update product

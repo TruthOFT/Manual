@@ -1,6 +1,5 @@
 package com.manual.manual.controller;
 
-import com.manual.manual.model.vo.home.HomeArtisanVO;
 import com.manual.manual.model.vo.home.HomeCategoryVO;
 import com.manual.manual.model.vo.home.HomePageVO;
 import com.manual.manual.model.vo.home.HomeProductVO;
@@ -36,21 +35,14 @@ class HomeControllerTest {
 
         HomeCategoryVO categoryVO = new HomeCategoryVO();
         categoryVO.setId(1L);
-        categoryVO.setCategoryName("陶艺");
+        categoryVO.setCategoryName("陶瓷器皿");
         categoryVO.setCategoryLevel(1);
         homePageVO.setCategories(List.of(categoryVO));
 
         HomeProductVO productVO = new HomeProductVO();
         productVO.setId(2L);
-        productVO.setProductName("手作茶杯");
-        productVO.setShopName("山野器物");
+        productVO.setProductName("暮色手作茶杯");
         homePageVO.setProducts(List.of(productVO));
-
-        HomeArtisanVO artisanVO = new HomeArtisanVO();
-        artisanVO.setId(3L);
-        artisanVO.setArtisanName("林青");
-        artisanVO.setProductCount(2L);
-        homePageVO.setArtisans(List.of(artisanVO));
 
         HomeRecentOrderVO recentOrderVO = new HomeRecentOrderVO();
         recentOrderVO.setId(4L);
@@ -64,9 +56,8 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.categories[0].categoryName").value("陶艺"))
-                .andExpect(jsonPath("$.data.products[0].productName").value("手作茶杯"))
-                .andExpect(jsonPath("$.data.artisans[0].artisanName").value("林青"))
+                .andExpect(jsonPath("$.data.categories[0].categoryName").value("陶瓷器皿"))
+                .andExpect(jsonPath("$.data.products[0].productName").value("暮色手作茶杯"))
                 .andExpect(jsonPath("$.data.recentOrders[0].finishTime").value("2026-04-15 20:15"));
     }
 
@@ -84,8 +75,6 @@ class HomeControllerTest {
                 .andExpect(jsonPath("$.data.categories").isEmpty())
                 .andExpect(jsonPath("$.data.products").isArray())
                 .andExpect(jsonPath("$.data.products").isEmpty())
-                .andExpect(jsonPath("$.data.artisans").isArray())
-                .andExpect(jsonPath("$.data.artisans").isEmpty())
                 .andExpect(jsonPath("$.data.recentOrders").isArray())
                 .andExpect(jsonPath("$.data.recentOrders").isEmpty());
     }

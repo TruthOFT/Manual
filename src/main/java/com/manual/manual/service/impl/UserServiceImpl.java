@@ -11,12 +11,14 @@ import com.manual.manual.model.dto.user.UserRechargeRequest;
 import com.manual.manual.model.entity.User;
 import com.manual.manual.model.vo.LoginUserVO;
 import com.manual.manual.model.vo.user.AdminUserVO;
+import com.manual.manual.service.RecommendationService;
 import com.manual.manual.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -37,6 +39,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Resource
     private UserMapper userMapper;
+
+    @Resource
+    @Lazy
+    private RecommendationService recommendationService;
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -72,6 +78,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                                  HttpServletRequest request, HttpServletResponse response) {
         User user = validateLoginCredentials(userAccount, userPassword);
         persistLoginState(user, rememberMe, request, response, USER_LOGIN_STATE);
+        refreshRecommendationsAfterLogin(user);
         return getLoginUserVO(user);
     }
 
@@ -209,7 +216,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setUserPassword(encryptPassword(nextPassword));
         }
         user.setUserName(defaultString(trim(updateRequest.getUserName()), user.getUserName()));
-        user.setAvatarUrl(trim(updateRequest.getAvatarUrl()));
+        if (updateRequest.getAvatarUrl() != null) {
+            user.setAvatarUrl(updateRequest.getAvatarUrl().trim());
+        }
         user.setPhone(phone);
         user.setEmail(email);
         user.setGender(defaultInteger(updateRequest.getGender(), user.getGender()));
@@ -300,6 +309,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             cookie.setHttpOnly(true);
             cookie.setMaxAge(maxAgeSeconds);
             response.addCookie(cookie);
+        }
+    }
+
+    private void refreshRecommendationsAfterLogin(User user) {
+        if (user == null || user.getId() == null) {
+            return;
+        }
+        try {
+            recommendationService.refreshUserRecommendations(user.getId());
+        } catch (Exception exception) {
+            log.warn("refresh user recommendations failed, userId={}", user.getId(), exception);
         }
     }
 

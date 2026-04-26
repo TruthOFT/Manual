@@ -1,24 +1,27 @@
 <script setup lang="ts">
-import { ArrowRightOutlined, GiftOutlined, ShopOutlined } from '@ant-design/icons-vue'
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { getMyRecommendations } from '@/api/recommendation'
+import { resolveUploadUrl } from '@/api/upload'
 import LandingNav from '@/components/layout/LandingNav.vue'
 import { useHomePage } from '@/composables/useHomePage'
+import { useUserStore } from '@/stores/user'
+import type { RecommendationProduct } from '@/types/recommendation'
 
 const router = useRouter()
+const userStore = useUserStore()
 const { errorMessage, homeData, loadHomePage, loading } = useHomePage()
 
-const operatingHighlights = [
-    '首页、作品页和匠人页共用真实公开数据，前台浏览信息已经打通。',
-    '精选作品、匠人信息和最近订单动态都直接来自 manual_mall 数据库。',
-    '后续继续扩展商品详情、购物车和下单链路时，可以沿用这套公开接口结构。',
-]
+const recommendationLoading = ref(false)
+const recommendedProducts = ref<RecommendationProduct[]>([])
 
 const categories = computed(() => homeData.value?.categories ?? [])
 const featuredProducts = computed(() => homeData.value?.products.slice(0, 3) ?? [])
-const signalProducts = computed(() => featuredProducts.value.slice(0, 2))
-const recentOrders = computed(() => homeData.value?.recentOrders ?? [])
+const signalProducts = computed(() => {
+    const products = recommendedProducts.value.length ? recommendedProducts.value : featuredProducts.value
+    return products.slice(0, 2)
+})
 
 function getPriceRange(minPrice: number, maxPrice: number) {
     return minPrice === maxPrice ? `CNY ${minPrice}` : `CNY ${minPrice} - ${maxPrice}`
@@ -28,20 +31,26 @@ function getSupportLabel(supportCustom: number) {
     return supportCustom ? '支持定制' : '现货零售'
 }
 
+async function loadRecommendations() {
+    if (!userStore.isLoggedIn) {
+        recommendedProducts.value = []
+        return
+    }
+    recommendationLoading.value = true
+    try {
+        recommendedProducts.value = await getMyRecommendations(2)
+    } catch {
+        recommendedProducts.value = []
+    } finally {
+        recommendationLoading.value = false
+    }
+}
+
 function goToProductDetail(productId: string) {
     void router.push({
         name: 'product-detail',
         params: {
             id: productId,
-        },
-    })
-}
-
-function goToArtisanDetail(artisanId: string) {
-    void router.push({
-        name: 'artisan-detail',
-        params: {
-            id: artisanId,
         },
     })
 }
@@ -54,6 +63,14 @@ function goToCategoryProducts(categoryId: string) {
         },
     })
 }
+
+onMounted(() => {
+    void loadRecommendations()
+})
+
+watch(() => userStore.currentUser?.id, () => {
+    void loadRecommendations()
+})
 </script>
 
 <template>
@@ -63,18 +80,15 @@ function goToCategoryProducts(categoryId: string) {
 
             <div class="hero-grid">
                 <div class="hero-copy">
-                    <p class="eyebrow">手作品牌展示、精选作品、匠人故事</p>
-                    <h1>把手工门店做成既有品牌温度，也方便用户浏览作品与认识匠人的前台站点。</h1>
+                    <p class="eyebrow">手作品牌展示、精选作品、门店商品</p>
+                    <h1>把手工门店做成既有品牌温度，也方便用户浏览作品的前台站点。</h1>
                     <p class="lead">
-                        首页现在只保留适合公开展示的导购信息，作品和匠人都已经接入真实数据，并且可以继续进入详情页查看更完整的内容。
+                        首页保留公开展示所需的导购信息，作品和分类都来自真实数据，用户登录后会在今日门店精选里看到为自己计算的推荐作品。
                     </p>
 
                     <a-space size="middle" wrap>
                         <RouterLink to="/products">
                             <a-button class="manual-ant-btn manual-ant-btn-primary" size="large">查看精选作品</a-button>
-                        </RouterLink>
-                        <RouterLink to="/artisans">
-                            <a-button class="manual-ant-btn manual-ant-btn-soft" size="large">浏览匠人故事</a-button>
                         </RouterLink>
                     </a-space>
 
@@ -87,46 +101,43 @@ function goToCategoryProducts(categoryId: string) {
 
                 <a-card class="hero-panel soft-card" :bordered="false">
                     <template #cover>
-                        <a-image :preview="false"
+                        <a-image
+                            :preview="false"
                             src="https://images.unsplash.com/photo-1517685352821-92cf88aee5a5?auto=format&fit=crop&w=1200&q=80"
-                            alt="handmade studio" />
+                            alt="handmade studio"
+                        />
                     </template>
 
                     <template #title>
                         <span class="card-title">今日门店精选</span>
                     </template>
 
-                    <p class="hero-panel-copy">用户进入首页就能快速感知作品风格、匠人来源和门店气质。</p>
-
-                    <a-skeleton v-if="loading" active :paragraph="{ rows: 4 }" />
+                    <a-skeleton v-if="loading || recommendationLoading" active :paragraph="{ rows: 4 }" />
 
                     <template v-else>
                         <div v-if="signalProducts.length" class="signal-list">
-                            <div v-for="product in signalProducts" :key="product.id"
-                                class="signal-item signal-item-clickable" @click="goToProductDetail(product.id)">
-                                <a-avatar shape="square" :size="56" :src="product.productCover" />
+                            <div
+                                v-for="product in signalProducts"
+                                :key="product.id"
+                                class="signal-item signal-item-clickable"
+                                @click="goToProductDetail(product.id)"
+                            >
+                                <a-avatar shape="square" :size="56" :src="resolveUploadUrl(product.productCover)" />
                                 <div class="signal-body">
                                     <strong>{{ product.productName }}</strong>
-                                    <small>{{ product.shopName }} / {{ product.craftType }}</small>
+                                    <small>{{ product.categoryName }} / {{ product.craftType }}</small>
                                 </div>
                                 <span>{{ getPriceRange(product.minPrice, product.maxPrice) }}</span>
                             </div>
                         </div>
                         <a-empty v-else description="暂无精选作品" />
                     </template>
-
-                    <a-divider />
-
-                    <a-space wrap>
-                        <a-tag v-for="item in operatingHighlights" :key="item" class="info-tag">{{ item }}</a-tag>
-                    </a-space>
                 </a-card>
             </div>
         </section>
 
         <section class="shell section">
             <p class="eyebrow">精选分类</p>
-            <h2>先用清晰的分类建立浏览节奏，再把真实商品数据接进来。</h2>
 
             <a-skeleton v-if="loading" active :paragraph="{ rows: 6 }" />
 
@@ -143,7 +154,7 @@ function goToCategoryProducts(categoryId: string) {
                         @keydown.space.prevent="goToCategoryProducts(category.id)"
                     >
                         <template #cover>
-                            <a-image :preview="false" :src="category.categoryIcon" :alt="category.categoryName" />
+                            <a-image :preview="false" :src="resolveUploadUrl(category.categoryIcon)" :alt="category.categoryName" />
                         </template>
                         <a-tag color="gold">level {{ category.categoryLevel }}</a-tag>
                         <h3>{{ category.categoryName }}</h3>
@@ -158,7 +169,6 @@ function goToCategoryProducts(categoryId: string) {
             <div class="section-head">
                 <div>
                     <p class="eyebrow">作品预览</p>
-                    <h2>首页只展示最值得先被看见的几件作品。</h2>
                 </div>
                 <RouterLink to="/products">
                     <a-button class="manual-ant-btn manual-ant-btn-ghost" size="large">进入作品页</a-button>
@@ -169,10 +179,9 @@ function goToCategoryProducts(categoryId: string) {
 
             <a-row v-else-if="featuredProducts.length" :gutter="[22, 22]">
                 <a-col v-for="product in featuredProducts" :key="product.id" :xs="24" :lg="8">
-                    <a-card class="soft-card image-card product-card" hoverable :bordered="false"
-                        @click="goToProductDetail(product.id)">
+                    <a-card class="soft-card image-card product-card" hoverable :bordered="false" @click="goToProductDetail(product.id)">
                         <template #cover>
-                            <a-image :preview="false" :src="product.productCover" :alt="product.productName" />
+                            <a-image :preview="false" :src="resolveUploadUrl(product.productCover)" :alt="product.productName" />
                         </template>
 
                         <div class="product-top">
@@ -186,70 +195,13 @@ function goToCategoryProducts(categoryId: string) {
                         <p>{{ product.productSubtitle }}</p>
 
                         <div class="product-foot">
-                            <button class="text-link" type="button" @click.stop="goToArtisanDetail(product.artisanId)">
-                                {{ product.artisanName }} / {{ product.shopName }}
-                            </button>
+                            <span class="text-link">{{ product.categoryName }}</span>
                             <strong>{{ getPriceRange(product.minPrice, product.maxPrice) }}</strong>
                         </div>
                     </a-card>
                 </a-col>
             </a-row>
             <a-empty v-else description="暂无作品数据" />
-        </section>
-
-        <section class="shell section two-col">
-            <a-card class="soft-card" :bordered="false">
-                <template #title>
-                    <span class="card-title">最近订单动态</span>
-                </template>
-
-                <a-skeleton v-if="loading" active :paragraph="{ rows: 5 }" />
-
-                <a-list v-else-if="recentOrders.length" :data-source="recentOrders" item-layout="horizontal">
-                    <template #renderItem="{ item }">
-                        <a-list-item>
-                            <a-list-item-meta>
-                                <template #avatar>
-                                    <a-avatar shape="square" :size="60" :src="item.productCover" />
-                                </template>
-                                <template #title>{{ item.productName }}</template>
-                                <template #description>{{ item.skuName }} / x{{ item.quantity }} / {{ item.finishTime
-                                    }}</template>
-                            </a-list-item-meta>
-                            <strong>CNY {{ item.totalAmount }}</strong>
-                        </a-list-item>
-                    </template>
-                </a-list>
-                <a-empty v-else description="暂无订单动态" />
-            </a-card>
-
-            <a-card class="soft-card notes-card" :bordered="false">
-                <template #title>
-                    <span class="card-title">前台导航方向</span>
-                </template>
-
-                <div class="note-block">
-                    <GiftOutlined />
-                    <div>
-                        <span>用户关注点</span>
-                        <strong>浏览作品、查看匠人、咨询定制、进入个人中心。</strong>
-                    </div>
-                </div>
-                <div class="note-block">
-                    <ShopOutlined />
-                    <div>
-                        <span>个人中心</span>
-                        <strong>承接我的订单、收藏、地址和账号设置，形成完整用户侧链路。</strong>
-                    </div>
-                </div>
-                <div class="note-block">
-                    <ArrowRightOutlined />
-                    <div>
-                        <span>后续扩展</span>
-                        <strong>后面继续补详情页、购物车和下单流程时，可以沿用当前公开数据结构。</strong>
-                    </div>
-                </div>
-            </a-card>
         </section>
     </main>
 </template>
@@ -273,13 +225,9 @@ function goToCategoryProducts(categoryId: string) {
     padding: 24px 0 88px;
 }
 
-.hero-grid,
-.two-col {
+.hero-grid {
     display: grid;
     gap: 24px;
-}
-
-.hero-grid {
     grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
     align-items: start;
     padding-top: 52px;
@@ -322,18 +270,11 @@ h1 {
     line-height: 0.96;
 }
 
-h2 {
-    font-size: clamp(2.1rem, 4vw, 3.8rem);
-    line-height: 0.98;
-    margin: 14px 0 12px;
-}
-
 h3 {
     font-size: 1.35rem;
 }
 
 .lead,
-.hero-panel-copy,
 .product-card p {
     color: var(--text);
 }
@@ -413,11 +354,6 @@ h3 {
     color: var(--text-muted);
 }
 
-.info-tag {
-    padding: 8px 12px;
-    border-radius: 999px;
-}
-
 .image-card :deep(.ant-card-body) {
     display: grid;
     gap: 14px;
@@ -452,38 +388,8 @@ h3 {
     color: var(--coral-deep);
 }
 
-.two-col {
-    grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
-    align-items: start;
-}
-
-.notes-card :deep(.ant-card-body) {
-    display: grid;
-    gap: 16px;
-}
-
-.note-block {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 14px;
-    align-items: start;
-    padding: 16px 18px;
-    border-radius: 20px;
-    background: rgba(255, 247, 238, 0.92);
-    color: var(--text-strong);
-}
-
-.note-block span {
-    display: block;
-    margin-bottom: 6px;
-    color: var(--text-muted);
-    font-size: 0.92rem;
-}
-
 @media (max-width: 1120px) {
-
-    .hero-grid,
-    .two-col {
+    .hero-grid {
         grid-template-columns: 1fr;
     }
 

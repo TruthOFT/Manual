@@ -44,21 +44,9 @@ export type ProductSku = {
     status: number
 }
 
-export type ProductReview = {
-    id: string
-    score: number
-    reviewContent: string | null
-    reviewImages: string | null
-    isAnonymous: number
-    replyContent: string | null
-    replyTime: string | null
-    createTime: string | null
-}
-
 export type ProductDetail = {
     id: string
     categoryId: string
-    artisanId: string
     productName: string
     productSubtitle: string
     productCover: string
@@ -71,14 +59,25 @@ export type ProductDetail = {
     soldQuantity: number
     favoriteCount: number
     reviewCount: number
+    favorited: boolean
     minPrice: number
     maxPrice: number
     categoryName: string
-    artisanName: string
-    shopName: string
-    artisanAvatar: string
     images: ProductImage[]
     materials: ProductMaterial[]
     skus: ProductSku[]
-    reviews: ProductReview[]
+}
+
+export type ProductFavorite = {
+    id: string
+    productId: string
+    productName: string
+    productSubtitle: string | null
+    productCover: string
+    craftType: string | null
+    originPlace: string | null
+    minPrice: number | string
+    maxPrice: number | string
+    categoryName: string | null
+    createTime: string | null
 }

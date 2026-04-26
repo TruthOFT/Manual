@@ -74,7 +74,7 @@ async function handleSubmit() {
         <section class="auth-shell">
             <a-card class="story-card" :bordered="false">
                 <p class="eyebrow">创建门店账号</p>
-                <h1>把你的商品、匠人节奏与门店故事放进一个清晰统一的系统中。</h1>
+                <h1>把你的商品、门店节奏与门店故事放进一个清晰统一的系统中。</h1>
                 <p class="lead">
                     当前注册只保留后端已经支持的最小字段，后续继续接业务接口时不需要再重做这一页。
                 </p>
@@ -82,14 +82,14 @@ async function handleSubmit() {
                 <div class="feature-grid">
                     <a-card class="mini-card" :bordered="false">
                         <strong>精选上新</strong>
-                        <p>把主推商品、节日礼盒和定制系列统一整理到一个流程里。</p>
+                        <p>把主推商品、节日礼盒和服务系列统一整理到一个流程里。</p>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
                         <strong>门店节奏</strong>
                         <p>通过首页快速查看销量变化、主推分类和订单动态。</p>
                     </a-card>
                     <a-card class="mini-card" :bordered="false">
-                        <strong>匠人协作</strong>
+                        <strong>门店协作</strong>
                         <p>把手作人、工作室与品牌展示统一在同一套门店语言里。</p>
                     </a-card>
                 </div>

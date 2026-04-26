@@ -3,13 +3,14 @@ import {
     AppstoreOutlined,
     BarsOutlined,
     DownOutlined,
-    FileSearchOutlined,
     FolderOpenOutlined,
+    GiftOutlined,
     HomeOutlined,
     LogoutOutlined,
     NotificationOutlined,
     SettingOutlined,
     ShoppingCartOutlined,
+    SolutionOutlined,
     TeamOutlined,
 } from '@ant-design/icons-vue'
 import { storeToRefs } from 'pinia'
@@ -27,19 +28,19 @@ const collapsed = ref(false)
 const loggingOut = ref(false)
 
 const navItems = [
-    { label: '控制台', path: '/', icon: HomeOutlined },
+    { label: '仪表盘', path: '/', icon: HomeOutlined },
     { label: '用户管理', path: '/users', icon: TeamOutlined },
-    { label: '匠人审核', path: '/artisan-applications', icon: FileSearchOutlined },
+    { label: '顾客管理', path: '/customers', icon: TeamOutlined },
+    { label: '店员管理', path: '/staff', icon: SolutionOutlined },
     { label: '商品管理', path: '/products', icon: AppstoreOutlined },
+    { label: '优惠券管理', path: '/coupons', icon: GiftOutlined },
     { label: '订单管理', path: '/orders', icon: ShoppingCartOutlined },
     { label: '分类管理', path: '/categories', icon: FolderOpenOutlined },
     { label: '系统设置', path: '/settings', icon: SettingOutlined },
 ]
 
-const pageTitle = computed(() => navItems.find((item) => item.path === route.path)?.label || '管理员端')
-const displayName = computed(
-    () => currentUser.value?.username || currentUser.value?.userAccount || '管理员',
-)
+const pageTitle = computed(() => navItems.find((item) => item.path === route.path)?.label || '管理后台')
+const displayName = computed(() => currentUser.value?.username || currentUser.value?.userAccount || '管理员')
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 const avatarUrl = computed(() => resolveAvatarUrl(currentUser.value?.avatarUrl))
 
@@ -102,7 +103,7 @@ async function handleLogout() {
                 <span v-if="!collapsed">收起导航</span>
             </button>
 
-            <nav class="admin-nav" aria-label="管理员导航">
+            <nav class="admin-nav" aria-label="管理后台导航">
                 <RouterLink
                     v-for="item in navItems"
                     :key="item.path"
@@ -123,7 +124,7 @@ async function handleLogout() {
         <section class="admin-main">
             <header class="topbar">
                 <div>
-                    <p class="eyebrow">管理员端</p>
+                    <p class="eyebrow">管理后台</p>
                     <h1>{{ pageTitle }}</h1>
                 </div>
 

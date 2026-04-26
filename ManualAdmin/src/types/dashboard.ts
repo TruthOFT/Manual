@@ -3,7 +3,7 @@ export type AdminDashboardOverview = {
     pendingOrderCount: number
     pendingShipmentOrderCount: number
     abnormalAddressOrderCount: number
-    activeArtisanCount: number
+    activeCustomerCount: number
     riskAlertCount: number
     lowStockRiskCount: number
     refundAlertCount: number

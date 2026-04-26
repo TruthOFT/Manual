@@ -24,6 +24,8 @@ public class OrderItemVO {
 
     private String productCover;
 
+    private String skuCover;
+
     private String specText;
 
     private Integer quantity;

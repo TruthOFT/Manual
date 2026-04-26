@@ -1,6 +1,7 @@
 package com.manual.manual.mapper;
 
 import com.manual.manual.model.vo.order.AdminOrderListItemVO;
+import com.manual.manual.model.vo.coupon.UserCouponVO;
 import com.manual.manual.model.vo.order.OrderDetailVO;
 import com.manual.manual.model.vo.order.OrderItemVO;
 import com.manual.manual.model.vo.order.OrderSkuSnapshotVO;
@@ -21,26 +22,20 @@ public interface OrderMapper {
             select
                 ps.id as skuId,
                 ps.productId,
-                p.artisanId,
                 p.productName,
-                p.productCover,
+                coalesce(nullif(ps.skuCover, ''), p.productCover) as productCover,
+                nullif(ps.skuCover, '') as skuCover,
                 ps.skuName,
                 ps.specText,
                 ps.price,
                 ps.stock,
                 ps.lockedStock,
-                ps.status as skuStatus,
-                p.status as productStatus,
-                p.auditStatus as productAuditStatus,
-                a.auditStatus as artisanAuditStatus,
-                a.shelfStatus as artisanShelfStatus
+                ps.status as skuStatus
             from product_sku ps
             inner join product p on p.id = ps.productId
-            inner join artisan_profile a on a.id = p.artisanId
             where ps.id = #{skuId}
               and ps.isDelete = 0
               and p.isDelete = 0
-              and a.isDelete = 0
             limit 1
             """)
     OrderSkuSnapshotVO selectSkuSnapshot(@Param("skuId") Long skuId);
@@ -268,7 +263,6 @@ public interface OrderMapper {
                 userId,
                 productId,
                 skuId,
-                artisanId,
                 productName,
                 skuName,
                 productCover,
@@ -288,7 +282,6 @@ public interface OrderMapper {
                 #{userId},
                 #{sku.productId},
                 #{sku.skuId},
-                #{sku.artisanId},
                 #{sku.productName},
                 #{sku.skuName},
                 #{sku.productCover},
@@ -311,6 +304,116 @@ public interface OrderMapper {
                         @Param("quantity") Integer quantity,
                         @Param("salePrice") BigDecimal salePrice,
                         @Param("totalAmount") BigDecimal totalAmount);
+
+    @Select("""
+            select
+                c.id,
+                cr.id as receiveId,
+                c.couponName,
+                c.couponType,
+                c.thresholdAmount,
+                c.discountAmount,
+                c.discountRate,
+                c.totalCount,
+                c.receiveCount,
+                greatest(c.totalCount - c.usedCount, 0) as remainingCount,
+                date_format(c.startTime, '%Y-%m-%d %H:%i:%s') as startTime,
+                date_format(c.endTime, '%Y-%m-%d %H:%i:%s') as endTime,
+                date_format(cr.receiveTime, '%Y-%m-%d %H:%i') as receiveTime,
+                cr.useStatus,
+                date_format(cr.useTime, '%Y-%m-%d %H:%i') as useTime,
+                cr.orderId
+            from coupon_receive cr
+            inner join coupon c on c.id = cr.couponId
+            where cr.id = #{couponReceiveId}
+              and cr.userId = #{userId}
+              and cr.useStatus = 0
+              and cr.isDelete = 0
+              and c.isDelete = 0
+              and c.couponStatus = 1
+              and c.startTime <= now()
+              and c.endTime >= now()
+              and c.usedCount < c.totalCount
+            limit 1
+            """)
+    UserCouponVO selectUsableCouponReceive(@Param("userId") Long userId,
+                                           @Param("couponReceiveId") Long couponReceiveId);
+
+    @Update("""
+            update coupon_receive
+            set useStatus = 1,
+                useTime = now(),
+                orderId = #{orderId},
+                updateTime = now()
+            where id = #{couponReceiveId}
+              and userId = #{userId}
+              and useStatus = 0
+              and isDelete = 0
+            """)
+    int markCouponReceiveUsed(@Param("userId") Long userId,
+                              @Param("couponReceiveId") Long couponReceiveId,
+                              @Param("orderId") Long orderId);
+
+    @Update("""
+            update coupon
+            set usedCount = usedCount + 1,
+                updateTime = now()
+            where id = #{couponId}
+              and isDelete = 0
+              and usedCount < totalCount
+            """)
+    int increaseCouponUsedCount(@Param("couponId") Long couponId);
+
+    @Select("""
+            select
+                c.id,
+                cr.id as receiveId,
+                c.couponName,
+                c.couponType,
+                c.thresholdAmount,
+                c.discountAmount,
+                c.discountRate,
+                c.totalCount,
+                c.receiveCount,
+                greatest(c.totalCount - c.usedCount, 0) as remainingCount,
+                date_format(c.startTime, '%Y-%m-%d %H:%i:%s') as startTime,
+                date_format(c.endTime, '%Y-%m-%d %H:%i:%s') as endTime,
+                date_format(cr.receiveTime, '%Y-%m-%d %H:%i') as receiveTime,
+                cr.useStatus,
+                date_format(cr.useTime, '%Y-%m-%d %H:%i') as useTime,
+                cr.orderId
+            from coupon_receive cr
+            inner join coupon c on c.id = cr.couponId
+            where cr.orderId = #{orderId}
+              and cr.useStatus = 1
+              and cr.isDelete = 0
+            limit 1
+            """)
+    UserCouponVO selectOrderCoupon(@Param("orderId") Long orderId);
+
+    @Update("""
+            update coupon_receive
+            set useStatus = 0,
+                useTime = null,
+                orderId = null,
+                updateTime = now()
+            where orderId = #{orderId}
+              and useStatus = 1
+              and isDelete = 0
+            """)
+    int restoreOrderCouponReceive(@Param("orderId") Long orderId);
+
+    @Update("""
+            update coupon
+            set usedCount = case
+                    when usedCount > 0 then usedCount - 1
+                    else 0
+                end,
+                updateTime = now()
+            where id = #{couponId}
+              and isDelete = 0
+            """)
+    int decreaseCouponUsedCount(@Param("couponId") Long couponId);
 
     @Select("""
             select
@@ -398,20 +501,22 @@ public interface OrderMapper {
 
     @Select("""
             select
-                id,
-                productId,
-                skuId,
-                productName,
-                skuName,
-                productCover,
-                specText,
-                quantity,
-                salePrice,
-                totalAmount
-            from order_item
-            where orderId = #{orderId}
-              and isDelete = 0
-            order by id asc
+                oi.id,
+                oi.productId,
+                oi.skuId,
+                oi.productName,
+                oi.skuName,
+                coalesce(nullif(ps.skuCover, ''), oi.productCover) as productCover,
+                nullif(ps.skuCover, '') as skuCover,
+                oi.specText,
+                oi.quantity,
+                oi.salePrice,
+                oi.totalAmount
+            from order_item oi
+            left join product_sku ps on ps.id = oi.skuId
+            where oi.orderId = #{orderId}
+              and oi.isDelete = 0
+            order by oi.id asc
             limit 1
             """)
     OrderItemVO selectOrderItem(@Param("orderId") Long orderId);

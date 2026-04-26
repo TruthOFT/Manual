@@ -41,34 +41,10 @@ public interface AdminDashboardMapper {
                        or trim(ifnull(district, '')) = ''
                        or trim(ifnull(detailAddress, '')) = ''
                    )) as pendingOrderCount,
-                (select count(1)
-                 from artisan_profile a
-                 where a.isDelete = 0
-                   and (
-                       exists (
-                           select 1
-                           from product p
-                           where p.artisanId = a.id
-                             and p.isDelete = 0
-                             and (
-                                 p.createTime >= date_sub(now(), interval 7 day)
-                                 or p.updateTime >= date_sub(now(), interval 7 day)
-                             )
-                       )
-                       or exists (
-                           select 1
-                           from order_item oi
-                           inner join orders o on o.id = oi.orderId
-                           where oi.artisanId = a.id
-                             and oi.isDelete = 0
-                             and o.isDelete = 0
-                             and (
-                                 o.createTime >= date_sub(now(), interval 7 day)
-                                 or o.updateTime >= date_sub(now(), interval 7 day)
-                                 or o.deliveryTime >= date_sub(now(), interval 7 day)
-                             )
-                       )
-                   )) as activeArtisanCount,
+                (select count(distinct userId)
+                 from orders
+                 where isDelete = 0
+                   and createTime >= date_sub(now(), interval 7 day)) as activeCustomerCount,
                 (select count(1)
                  from product
                  where isDelete = 0

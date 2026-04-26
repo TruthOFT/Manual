@@ -11,11 +11,11 @@ public class OrderSkuSnapshotVO {
 
     private Long productId;
 
-    private Long artisanId;
-
     private String productName;
 
     private String productCover;
+
+    private String skuCover;
 
     private String skuName;
 
@@ -28,12 +28,4 @@ public class OrderSkuSnapshotVO {
     private Integer lockedStock;
 
     private Integer skuStatus;
-
-    private Integer productStatus;
-
-    private Integer productAuditStatus;
-
-    private Integer artisanAuditStatus;
-
-    private Integer artisanShelfStatus;
 }

@@ -3,13 +3,17 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 
+import { getMyCoupons } from '@/api/coupon'
 import { createOrder, getOrderAddresses } from '@/api/order'
-import { getProductDetail } from '@/api/product'
+import { favoriteProduct, getProductDetail, unfavoriteProduct } from '@/api/product'
+import { getSimilarProducts, recordProductBehavior } from '@/api/recommendation'
 import { resolveUploadUrl } from '@/api/upload'
 import LandingNav from '@/components/layout/LandingNav.vue'
 import { useUserStore } from '@/stores/user'
+import type { UserCoupon } from '@/types/coupon'
 import type { UserAddress } from '@/types/order'
-import type { ProductDetail, ProductReview, ProductSku } from '@/types/product'
+import type { ProductDetail, ProductSku } from '@/types/product'
+import type { RecommendationProduct } from '@/types/recommendation'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,26 +22,48 @@ const userStore = useUserStore()
 const loading = ref(false)
 const errorMessage = ref('')
 const productDetail = ref<ProductDetail | null>(null)
+const similarProducts = ref<RecommendationProduct[]>([])
 const selectedSkuId = ref<string>()
 const quantity = ref(1)
 const checkoutVisible = ref(false)
 const addressLoading = ref(false)
+const couponLoading = ref(false)
 const submitting = ref(false)
+const favoriteSubmitting = ref(false)
 const addresses = ref<UserAddress[]>([])
+const orderCoupons = ref<UserCoupon[]>([])
 const selectedAddressId = ref<string>()
+const selectedCouponReceiveId = ref<string>()
 const buyerRemark = ref('')
+
+const availableSkus = computed(() => productDetail.value?.skus.filter((item) => item.status === 1) ?? [])
+
+const selectedSku = computed(() => availableSkus.value.find((item) => item.id === selectedSkuId.value) ?? availableSkus.value[0])
+
+const selectedGalleryImage = computed(() => {
+    const detail = productDetail.value
+    if (!detail) {
+        return ''
+    }
+    return selectedSku.value?.skuCover?.trim() || detail.productCover || detail.images[0]?.imageUrl || ''
+})
 
 const detailImages = computed(() => {
     const detail = productDetail.value
     if (!detail) {
         return []
     }
-    return detail.images.length ? detail.images : [{ id: detail.id, imageUrl: detail.productCover, imageType: 'cover' }]
+    const images = [...(detail.images ?? [])]
+    const skuCover = selectedSku.value?.skuCover?.trim()
+    if (skuCover && !images.some((image) => image.imageUrl === skuCover)) {
+        images.unshift({
+            id: `sku-${selectedSku.value?.id}`,
+            imageUrl: skuCover,
+            imageType: 'sku',
+        })
+    }
+    return images.length ? images : [{ id: detail.id, imageUrl: detail.productCover, imageType: 'cover' }]
 })
-
-const availableSkus = computed(() => productDetail.value?.skus.filter((item) => item.status === 1) ?? [])
-
-const selectedSku = computed(() => availableSkus.value.find((item) => item.id === selectedSkuId.value) ?? availableSkus.value[0])
 
 const availableStock = computed(() => {
     const sku = selectedSku.value
@@ -59,6 +85,14 @@ const totalAmount = computed(() => {
     return Number(sku.price || 0) * quantity.value
 })
 
+const availableOrderCoupons = computed(() => orderCoupons.value.filter((coupon) => canUseCoupon(coupon)))
+
+const selectedCoupon = computed(() => availableOrderCoupons.value.find((coupon) => coupon.receiveId === selectedCouponReceiveId.value))
+
+const orderDiscountAmount = computed(() => calculateCouponDiscount(selectedCoupon.value))
+
+const orderPayAmount = computed(() => Math.max(0, totalAmount.value - orderDiscountAmount.value))
+
 async function loadProductDetail(productId: string) {
     loading.value = true
     errorMessage.value = ''
@@ -70,11 +104,33 @@ async function loadProductDetail(productId: string) {
         productDetail.value = detail
         selectedSkuId.value = detail.skus.find((item) => item.status === 1 && Number(item.stock) > Number(item.lockedStock))?.id
             ?? detail.skus[0]?.id
+        await loadSimilarProducts(productId)
+        recordBrowseBehavior(productId)
     } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '加载作品详情失败，请稍后重试。'
     } finally {
         loading.value = false
     }
+}
+
+async function loadSimilarProducts(productId: string) {
+    try {
+        similarProducts.value = await getSimilarProducts(productId, 6)
+    } catch {
+        similarProducts.value = []
+    }
+}
+
+function recordBrowseBehavior(productId: string) {
+    if (!userStore.isLoggedIn) {
+        return
+    }
+    void recordProductBehavior({
+        productId,
+        behaviorType: 1,
+        sourcePage: 'product_detail',
+        deviceType: window.innerWidth <= 760 ? 'mobile' : 'desktop',
+    }).catch(() => undefined)
 }
 
 function formatMoney(value: number | string | null | undefined) {
@@ -85,26 +141,60 @@ function getPriceRange(minPrice: number, maxPrice: number) {
     return minPrice === maxPrice ? formatMoney(minPrice) : `${formatMoney(minPrice)} - ${formatMoney(maxPrice)}`
 }
 
-function getReviewImages(review: ProductReview) {
-    return review.reviewImages
-        ? review.reviewImages
-              .split(',')
-              .map((item) => item.trim())
-              .filter(Boolean)
-        : []
+function goToProductDetail(productId: string) {
+    void router.push({
+        name: 'product-detail',
+        params: {
+            id: productId,
+        },
+    })
 }
 
 function getSkuCover(sku: ProductSku) {
     return resolveUploadUrl(sku.skuCover || productDetail.value?.productCover || '')
 }
 
-function goToArtisanDetail(artisanId: string) {
-    void router.push({
-        name: 'artisan-detail',
-        params: {
-            id: artisanId,
-        },
-    })
+function formatCouponDiscount(coupon: UserCoupon) {
+    if (coupon.couponType === 2) {
+        return `${coupon.discountRate ?? '-'} 折`
+    }
+    return `减 ${formatMoney(coupon.discountAmount)}`
+}
+
+function formatCouponThreshold(coupon: UserCoupon) {
+    const threshold = Number(coupon.thresholdAmount || 0)
+    return threshold > 0 ? `满 ${formatMoney(threshold)} 可用` : '无门槛'
+}
+
+function canUseCoupon(coupon: UserCoupon) {
+    if (!coupon.receiveId || coupon.useStatus !== 0) {
+        return false
+    }
+    const threshold = Number(coupon.thresholdAmount || 0)
+    if (totalAmount.value < threshold) {
+        return false
+    }
+    const now = Date.now()
+    const startTime = Date.parse(coupon.startTime.replace(/-/g, '/'))
+    const endTime = Date.parse(coupon.endTime.replace(/-/g, '/'))
+    if (!Number.isNaN(startTime) && now < startTime) {
+        return false
+    }
+    return Number.isNaN(endTime) || now <= endTime
+}
+
+function calculateCouponDiscount(coupon: UserCoupon | undefined) {
+    if (!coupon) {
+        return 0
+    }
+    if (coupon.couponType === 2) {
+        const rate = Number(coupon.discountRate || 0)
+        if (rate <= 0 || rate >= 10) {
+            return 0
+        }
+        return Math.min(totalAmount.value, totalAmount.value - (totalAmount.value * rate) / 10)
+    }
+    return Math.min(totalAmount.value, Number(coupon.discountAmount || 0))
 }
 
 async function openCheckout() {
@@ -122,13 +212,15 @@ async function openCheckout() {
         return
     }
     addressLoading.value = true
+    couponLoading.value = true
     checkoutVisible.value = true
     try {
-        await loadAddresses()
+        await Promise.all([loadAddresses(), loadOrderCoupons()])
     } catch (error) {
-        message.error(error instanceof Error ? error.message : '加载收货地址失败')
+        message.error(error instanceof Error ? error.message : '加载结算信息失败')
     } finally {
         addressLoading.value = false
+        couponLoading.value = false
     }
 }
 
@@ -140,6 +232,13 @@ async function loadAddresses() {
     }
 }
 
+async function loadOrderCoupons() {
+    orderCoupons.value = await getMyCoupons({ useStatus: 0 })
+    if (selectedCouponReceiveId.value && !availableOrderCoupons.value.some((coupon) => coupon.receiveId === selectedCouponReceiveId.value)) {
+        selectedCouponReceiveId.value = undefined
+    }
+}
+
 async function refreshAddresses() {
     addressLoading.value = true
     try {
@@ -148,6 +247,17 @@ async function refreshAddresses() {
         message.error(error instanceof Error ? error.message : '刷新收货地址失败')
     } finally {
         addressLoading.value = false
+    }
+}
+
+async function refreshCoupons() {
+    couponLoading.value = true
+    try {
+        await loadOrderCoupons()
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '刷新优惠券失败')
+    } finally {
+        couponLoading.value = false
     }
 }
 
@@ -168,6 +278,7 @@ async function submitOrder() {
             skuId: sku.id,
             quantity: quantity.value,
             addressId: selectedAddressId.value,
+            couponReceiveId: selectedCouponReceiveId.value,
             buyerRemark: buyerRemark.value || undefined,
         })
         checkoutVisible.value = false
@@ -177,6 +288,34 @@ async function submitOrder() {
         message.error(error instanceof Error ? error.message : '提交订单失败')
     } finally {
         submitting.value = false
+    }
+}
+
+async function toggleFavorite() {
+    const detail = productDetail.value
+    if (!detail) {
+        return
+    }
+    if (!userStore.isLoggedIn) {
+        const redirect = router.currentRoute.value.fullPath
+        await router.push(`/login?redirect=${encodeURIComponent(redirect)}`)
+        return
+    }
+    favoriteSubmitting.value = true
+    try {
+        if (detail.favorited) {
+            await unfavoriteProduct(detail.id)
+            detail.favorited = false
+            detail.favoriteCount = Math.max(0, Number(detail.favoriteCount || 0) - 1)
+        } else {
+            await favoriteProduct(detail.id)
+            detail.favorited = true
+            detail.favoriteCount = Number(detail.favoriteCount || 0) + 1
+        }
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '收藏操作失败')
+    } finally {
+        favoriteSubmitting.value = false
     }
 }
 
@@ -192,6 +331,12 @@ watch(
     },
     { immediate: true },
 )
+
+watch([totalAmount, selectedSkuId], () => {
+    if (selectedCouponReceiveId.value && !availableOrderCoupons.value.some((coupon) => coupon.receiveId === selectedCouponReceiveId.value)) {
+        selectedCouponReceiveId.value = undefined
+    }
+})
 </script>
 
 <template>
@@ -220,7 +365,7 @@ watch(
             <div v-else-if="productDetail" class="detail-grid">
                 <a-card class="soft-card gallery-card" :bordered="false">
                     <template #cover>
-                        <a-image :preview="false" :src="resolveUploadUrl(productDetail.productCover)" :alt="productDetail.productName" />
+                        <a-image :preview="false" :src="resolveUploadUrl(selectedGalleryImage)" :alt="productDetail.productName" />
                     </template>
 
                     <div v-if="detailImages.length > 1" class="thumb-grid">
@@ -241,7 +386,6 @@ watch(
 
                     <a-space wrap>
                         <a-tag color="orange">{{ productDetail.categoryName }}</a-tag>
-                        <a-tag color="green" v-if="productDetail.supportCustom">支持定制</a-tag>
                         <a-tag>{{ productDetail.craftType }}</a-tag>
                         <a-tag>{{ productDetail.originPlace }}</a-tag>
                         <a-tag>{{ productDetail.handmadeCycleDays }} 天手作周期</a-tag>
@@ -249,8 +393,17 @@ watch(
 
                     <div class="price-row">
                         <strong>{{ getPriceRange(productDetail.minPrice, productDetail.maxPrice) }}</strong>
-                        <span>已售 {{ productDetail.soldQuantity }} 件</span>
+                        <span>已售 {{ productDetail.soldQuantity }} 件 / 收藏 {{ productDetail.favoriteCount }}</span>
                     </div>
+
+                    <a-button
+                        class="manual-ant-btn favorite-btn"
+                        :class="productDetail.favorited ? 'manual-ant-btn-primary' : 'manual-ant-btn-ghost'"
+                        :loading="favoriteSubmitting"
+                        @click="toggleFavorite"
+                    >
+                        {{ productDetail.favorited ? '已收藏' : '收藏作品' }}
+                    </a-button>
 
                     <div v-if="availableSkus.length" class="buy-panel">
                         <a-radio-group v-model:value="selectedSkuId" class="sku-list">
@@ -292,27 +445,13 @@ watch(
                     <a-alert v-else type="warning" show-icon message="当前作品暂无可购买规格" />
 
                     <p class="body-copy">{{ productDetail.productDesc }}</p>
-
-                    <a-card class="soft-card artisan-panel" :bordered="false">
-                        <div class="artisan-summary">
-                            <a-avatar :size="64" :src="resolveUploadUrl(productDetail.artisanAvatar)" />
-                            <div>
-                                <span>对应匠人</span>
-                                <strong>{{ productDetail.artisanName }}</strong>
-                                <small>{{ productDetail.shopName }}</small>
-                            </div>
-                        </div>
-                        <a-button class="manual-ant-btn manual-ant-btn-primary" @click="goToArtisanDetail(productDetail.artisanId)">
-                            查看匠人详情
-                        </a-button>
-                    </a-card>
                 </div>
             </div>
         </section>
 
         <section v-if="productDetail" class="shell section">
             <a-row :gutter="[24, 24]">
-                <a-col :xs="24" :lg="12">
+                <a-col :span="24">
                     <a-card class="soft-card" :bordered="false" title="材料信息">
                         <p v-if="productDetail.materialDesc" class="summary-copy">{{ productDetail.materialDesc }}</p>
                         <a-list v-if="productDetail.materials.length" :data-source="productDetail.materials">
@@ -326,43 +465,35 @@ watch(
                                 </a-list-item>
                             </template>
                         </a-list>
-                        <a-empty v-else description="暂无材料明细" />
+                        <a-empty v-else-if="!productDetail.materialDesc" description="暂无材料明细" />
                     </a-card>
                 </a-col>
+            </a-row>
+        </section>
 
-                <a-col :xs="24" :lg="12">
-                    <a-card class="soft-card" :bordered="false" title="评价与反馈">
-                        <a-list v-if="productDetail.reviews.length" :data-source="productDetail.reviews">
-                            <template #renderItem="{ item }">
-                                <a-list-item>
-                                    <div class="review-block">
-                                        <div class="review-head">
-                                            <strong>{{ item.isAnonymous ? '匿名用户' : '买家评价' }}</strong>
-                                            <a-rate :value="item.score" disabled allow-half />
-                                        </div>
-                                        <p>{{ item.reviewContent || '该用户没有填写评价内容。' }}</p>
-                                        <div v-if="getReviewImages(item).length" class="review-images">
-                                            <a-image
-                                                v-for="image in getReviewImages(item)"
-                                                :key="image"
-                                                :src="resolveUploadUrl(image)"
-                                                :preview="true"
-                                                class="review-image"
-                                            />
-                                        </div>
-                                        <small>{{ item.createTime }}</small>
-                                        <a-alert
-                                            v-if="item.replyContent"
-                                            type="info"
-                                            show-icon
-                                            :message="item.replyContent"
-                                            :description="item.replyTime ? `商家回复时间：${item.replyTime}` : undefined"
-                                        />
-                                    </div>
-                                </a-list-item>
-                            </template>
-                        </a-list>
-                        <a-empty v-else description="暂无公开评价" />
+        <section v-if="similarProducts.length" class="shell section">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">相似推荐</p>
+                    <h2>看过这件作品的用户，也常对这些作品感兴趣。</h2>
+                </div>
+            </div>
+            <a-row :gutter="[22, 22]">
+                <a-col v-for="product in similarProducts" :key="product.id" :xs="24" :lg="8">
+                    <a-card class="soft-card similar-card" hoverable :bordered="false" @click="goToProductDetail(product.id)">
+                        <template #cover>
+                            <a-image :preview="false" :src="resolveUploadUrl(product.productCover)" :alt="product.productName" />
+                        </template>
+                        <div class="product-top">
+                            <a-tag color="orange">{{ product.categoryName }}</a-tag>
+                            <a-tag v-if="product.similarityScore">相似度 {{ Number(product.similarityScore).toFixed(2) }}</a-tag>
+                        </div>
+                        <h3>{{ product.productName }}</h3>
+                        <p>{{ product.productSubtitle }}</p>
+                        <div class="product-foot">
+                            <span>{{ product.craftType }}</span>
+                            <strong>{{ getPriceRange(product.minPrice, product.maxPrice) }}</strong>
+                        </div>
                     </a-card>
                 </a-col>
             </a-row>
@@ -399,12 +530,35 @@ watch(
                         </a-radio>
                     </a-radio-group>
                     <a-textarea v-model:value="buyerRemark" :rows="3" placeholder="买家备注，可不填" />
+                    <div class="checkout-tools">
+                        <span>选择优惠券</span>
+                        <a-button type="link" :loading="couponLoading" @click="refreshCoupons">刷新优惠券</a-button>
+                    </div>
+                    <a-spin :spinning="couponLoading">
+                        <a-empty v-if="!availableOrderCoupons.length" description="暂无可用优惠券" />
+                        <a-radio-group v-else v-model:value="selectedCouponReceiveId" class="coupon-list">
+                            <a-radio :value="undefined" class="coupon-option">
+                                <strong>不使用优惠券</strong>
+                                <span>保持订单原价</span>
+                            </a-radio>
+                            <a-radio
+                                v-for="coupon in availableOrderCoupons"
+                                :key="coupon.receiveId || coupon.id"
+                                :value="coupon.receiveId"
+                                class="coupon-option"
+                            >
+                                <strong>{{ coupon.couponName }} / {{ formatCouponDiscount(coupon) }}</strong>
+                                <span>{{ formatCouponThreshold(coupon) }}，有效期至 {{ coupon.endTime }}</span>
+                            </a-radio>
+                        </a-radio-group>
+                    </a-spin>
                     <div v-if="selectedSku" class="checkout-summary">
                         <img :src="getSkuCover(selectedSku)" :alt="selectedSku.skuName" />
                         <div>
                             <strong>{{ selectedSku.skuName }}</strong>
                             <span>{{ selectedSku.specText || selectedSku.materialType || '标准规格' }} x {{ quantity }}</span>
-                            <b>{{ formatMoney(totalAmount) }}</b>
+                            <span v-if="orderDiscountAmount > 0">优惠 {{ formatMoney(orderDiscountAmount) }}</span>
+                            <b>应付 {{ formatMoney(orderPayAmount) }}</b>
                         </div>
                     </div>
                 </template>
@@ -435,6 +589,18 @@ watch(
 
 .section {
     padding-bottom: 48px;
+}
+
+.section-head {
+    margin-bottom: 22px;
+}
+
+.section-head h2 {
+    margin: 8px 0 0;
+    color: var(--text-strong);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1;
 }
 
 .back-btn {
@@ -505,6 +671,13 @@ h1 {
     line-height: 0.98;
 }
 
+h3 {
+    margin: 0;
+    color: var(--text-strong);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+}
+
 .lead,
 .body-copy,
 .summary-copy {
@@ -529,6 +702,10 @@ h1 {
 .price-row span,
 .quantity-row span {
     color: var(--text-muted);
+}
+
+.favorite-btn {
+    width: fit-content;
 }
 
 .quantity-row span {
@@ -580,54 +757,9 @@ h1 {
     color: var(--text-muted);
 }
 
-.artisan-panel :deep(.ant-card-body) {
-    display: grid;
-    gap: 16px;
-}
-
-.artisan-summary {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.artisan-summary span,
-.artisan-summary small {
-    display: block;
-    color: var(--text-muted);
-}
-
-.artisan-summary strong {
-    color: var(--text-strong);
-    font-size: 1.15rem;
-}
-
-.review-block {
-    display: grid;
-    gap: 12px;
-    width: 100%;
-}
-
-.review-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: center;
-}
-
-.review-images {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.review-image :deep(img) {
-    height: 120px;
-    object-fit: cover;
-}
-
 .checkout-body,
-.address-list {
+.address-list,
+.coupon-list {
     display: grid;
     gap: 14px;
 }
@@ -644,7 +776,8 @@ h1 {
     font-weight: 800;
 }
 
-.address-option {
+.address-option,
+.coupon-option {
     width: 100%;
     padding: 14px;
     border: 1px solid rgba(171, 118, 69, 0.18);
@@ -654,8 +787,14 @@ h1 {
 
 .address-option strong,
 .address-option span,
-.address-option small {
+.address-option small,
+.coupon-option strong,
+.coupon-option span {
     display: block;
+}
+
+.coupon-option span {
+    color: var(--text-muted);
 }
 
 .checkout-summary {
@@ -679,6 +818,36 @@ h1 {
     gap: 4px;
 }
 
+.similar-card {
+    cursor: pointer;
+}
+
+.similar-card :deep(.ant-card-cover img) {
+    height: 220px;
+    object-fit: cover;
+}
+
+.similar-card :deep(.ant-card-body) {
+    display: grid;
+    gap: 14px;
+}
+
+.product-top,
+.product-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.product-foot {
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.product-foot strong {
+    color: var(--coral-deep);
+}
+
 @media (max-width: 900px) {
     .detail-grid {
         grid-template-columns: 1fr;
@@ -690,13 +859,11 @@ h1 {
         padding: 16px 16px 56px;
     }
 
-    .thumb-grid,
-    .review-images {
+    .thumb-grid {
         grid-template-columns: 1fr;
     }
 
     .price-row,
-    .review-head,
     .pay-row,
     .quantity-row {
         flex-direction: column;

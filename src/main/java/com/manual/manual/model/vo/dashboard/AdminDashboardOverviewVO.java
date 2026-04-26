@@ -15,7 +15,7 @@ public class AdminDashboardOverviewVO {
 
     private Long abnormalAddressOrderCount;
 
-    private Long activeArtisanCount;
+    private Long activeCustomerCount;
 
     private Long riskAlertCount;
 

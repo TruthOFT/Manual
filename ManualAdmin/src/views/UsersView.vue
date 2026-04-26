@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { EditOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import { createAdminUser, deleteAdminUser, getAdminUserDetail, getAdminUsers, updateAdminUser } from '@/api/user'
+import { API_CONTEXT_PATH, BASE_URL } from '@/api/request'
+import { uploadFile } from '@/api/upload'
 import type { AdminUser, AdminUserCreateRequest, AdminUserUpdateRequest } from '@/types/user'
 
 const columns = [
@@ -25,6 +27,9 @@ const keyword = ref('')
 const userRole = ref<string | undefined>()
 const userStatus = ref<number | undefined>()
 const users = ref<AdminUser[]>([])
+const avatarFileInputRef = ref<HTMLInputElement>()
+const pendingAvatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
 
 const form = reactive({
     userAccount: '',
@@ -40,8 +45,10 @@ const form = reactive({
 })
 
 const modalTitle = computed(() => (isEditMode.value ? '编辑用户' : '新增用户'))
+const displayAvatarUrl = computed(() => avatarPreviewUrl.value || resolveImageUrl(form.avatarUrl))
 
 function resetForm() {
+    revokeAvatarPreview()
     form.userAccount = ''
     form.userPassword = ''
     form.userName = ''
@@ -56,15 +63,89 @@ function resetForm() {
     isEditMode.value = false
 }
 
+function resolveImageUrl(url?: string | null) {
+    if (!url) {
+        return ''
+    }
+    const value = String(url).trim()
+    if (!value) {
+        return ''
+    }
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+        return value
+    }
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+        return value
+    }
+    const normalizedPath = value.startsWith('/') ? value : `/${value}`
+    if (normalizedPath.startsWith(`${API_CONTEXT_PATH}/`)) {
+        return `${BASE_URL}${normalizedPath}`
+    }
+    if (normalizedPath.startsWith('/upload/')) {
+        return `${BASE_URL}${API_CONTEXT_PATH}${normalizedPath}`
+    }
+    return `${BASE_URL}${normalizedPath}`
+}
+
+function revokeAvatarPreview() {
+    if (avatarPreviewUrl.value) {
+        URL.revokeObjectURL(avatarPreviewUrl.value)
+    }
+    avatarPreviewUrl.value = ''
+    pendingAvatarFile.value = null
+    if (avatarFileInputRef.value) {
+        avatarFileInputRef.value.value = ''
+    }
+}
+
+function openAvatarPicker() {
+    avatarFileInputRef.value?.click()
+}
+
+function handleAvatarFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) {
+        return
+    }
+    if (!file.type.startsWith('image/')) {
+        message.warning('请选择图片文件')
+        input.value = ''
+        return
+    }
+    if (file.size > 100 * 1024 * 1024) {
+        message.warning('图片不能超过 100M')
+        input.value = ''
+        return
+    }
+    if (avatarPreviewUrl.value) {
+        URL.revokeObjectURL(avatarPreviewUrl.value)
+    }
+    pendingAvatarFile.value = file
+    avatarPreviewUrl.value = URL.createObjectURL(file)
+}
+
+function clearAvatar() {
+    revokeAvatarPreview()
+    form.avatarUrl = ''
+}
+
+async function resolveAvatarUrl() {
+    if (!pendingAvatarFile.value) {
+        return form.avatarUrl
+    }
+    return uploadFile('user', pendingAvatarFile.value)
+}
+
 function getRoleText(role: string) {
     if (role === 'admin') return '管理员'
-    if (role === 'artisan') return '匠人'
+    if (role === 'staff') return '店员'
     return '普通用户'
 }
 
 function getRoleColor(role: string) {
     if (role === 'admin') return 'geekblue'
-    if (role === 'artisan') return 'gold'
+    if (role === 'staff') return 'gold'
     return 'green'
 }
 
@@ -105,6 +186,7 @@ async function openEditModal(id: string) {
         form.userPassword = ''
         form.userName = detail.userName || ''
         form.avatarUrl = detail.avatarUrl || ''
+        revokeAvatarPreview()
         form.phone = detail.phone || ''
         form.email = detail.email || ''
         form.gender = detail.gender ?? 0
@@ -120,11 +202,12 @@ async function openEditModal(id: string) {
 async function handleSave() {
     saving.value = true
     try {
+        const avatarUrl = await resolveAvatarUrl()
         if (isEditMode.value) {
             const payload: AdminUserUpdateRequest = {
                 userPassword: form.userPassword || undefined,
                 userName: form.userName,
-                avatarUrl: form.avatarUrl || undefined,
+                avatarUrl,
                 phone: form.phone || undefined,
                 email: form.email || undefined,
                 gender: form.gender,
@@ -138,7 +221,7 @@ async function handleSave() {
                 userAccount: form.userAccount,
                 userPassword: form.userPassword,
                 userName: form.userName,
-                avatarUrl: form.avatarUrl || undefined,
+                avatarUrl: avatarUrl || undefined,
                 phone: form.phone || undefined,
                 email: form.email || undefined,
                 gender: form.gender,
@@ -179,6 +262,10 @@ function handleDelete(id: string) {
 onMounted(() => {
     void loadUsers()
 })
+
+onBeforeUnmount(() => {
+    revokeAvatarPreview()
+})
 </script>
 
 <template>
@@ -200,7 +287,7 @@ onMounted(() => {
             <a-input v-model:value="keyword" size="large" placeholder="搜索账号或昵称" @press-enter="loadUsers" />
             <a-select v-model:value="userRole" allow-clear size="large" placeholder="筛选角色">
                 <a-select-option value="admin">管理员</a-select-option>
-                <a-select-option value="artisan">匠人</a-select-option>
+                <a-select-option value="staff">店员</a-select-option>
                 <a-select-option value="user">普通用户</a-select-option>
             </a-select>
             <a-select v-model:value="userStatus" allow-clear size="large" placeholder="筛选状态">
@@ -264,8 +351,32 @@ onMounted(() => {
             <a-form-item label="用户昵称">
                 <a-input v-model:value="form.userName" size="large" />
             </a-form-item>
-            <a-form-item label="头像地址">
-                <a-input v-model:value="form.avatarUrl" size="large" />
+            <a-form-item label="头像" class="span-2">
+                <div class="avatar-uploader">
+                    <a-avatar v-if="displayAvatarUrl" :size="96" :src="displayAvatarUrl" class="avatar-preview" />
+                    <div v-else class="empty-avatar-preview">暂无头像</div>
+                    <div class="avatar-upload-actions">
+                        <input
+                            ref="avatarFileInputRef"
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            aria-hidden="true"
+                            tabindex="-1"
+                            class="hidden-file-input"
+                            @change="handleAvatarFileChange"
+                        />
+                        <a-space wrap>
+                            <a-button @click="openAvatarPicker">选择图片</a-button>
+                            <a-button v-if="displayAvatarUrl" danger @click="clearAvatar">
+                                <DeleteOutlined />
+                                删除头像
+                            </a-button>
+                        </a-space>
+                        <span v-if="pendingAvatarFile">{{ pendingAvatarFile.name }}</span>
+                        <span v-else-if="form.avatarUrl">{{ form.avatarUrl }}</span>
+                    </div>
+                </div>
             </a-form-item>
             <a-form-item label="手机号">
                 <a-input v-model:value="form.phone" size="large" />
@@ -283,7 +394,7 @@ onMounted(() => {
             <a-form-item label="角色">
                 <a-select v-model:value="form.userRole" size="large">
                     <a-select-option value="admin">管理员</a-select-option>
-                    <a-select-option value="artisan">匠人</a-select-option>
+                    <a-select-option value="staff">店员</a-select-option>
                     <a-select-option value="user">普通用户</a-select-option>
                 </a-select>
             </a-form-item>
@@ -322,13 +433,68 @@ onMounted(() => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.span-2 {
+    grid-column: 1 / -1;
+}
+
 .full-width {
     width: 100%;
+}
+
+.avatar-uploader {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+}
+
+.avatar-preview {
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.12);
+}
+
+.empty-avatar-preview {
+    display: grid;
+    place-items: center;
+    width: 96px;
+    height: 96px;
+    border: 1px dashed rgba(30, 64, 175, 0.24);
+    border-radius: 50%;
+    color: var(--text-muted);
+    background: #f8fafc;
+}
+
+.avatar-upload-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.avatar-upload-actions span {
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
+.hidden-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 @media (max-width: 980px) {
     .toolbar,
     .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .span-2 {
+        grid-column: auto;
+    }
+
+    .avatar-uploader {
         grid-template-columns: 1fr;
     }
 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Data
 public class ProductListItemVO {
@@ -36,4 +37,8 @@ public class ProductListItemVO {
     private BigDecimal maxPrice;
 
     private String categoryName;
+
+    private Integer sortOrder;
+
+    private Date updateTime;
 }

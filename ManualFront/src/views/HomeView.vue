@@ -227,8 +227,8 @@ watch(() => userStore.currentUser?.id, () => {
                 <a-col :xs="24" :md="8">
                     <div class="feature-item">
                         <div class="feature-icon">🎨</div>
-                        <h3>个性化定制</h3>
-                        <p>支持深度个性化定制，将您的灵感和故事融入专属的手作之中。</p>
+                        <h3>原创设计作品</h3>
+                        <p>汇聚匠人原创手作，让每一件作品都有独特的设计感与温度。</p>
                     </div>
                 </a-col>
             </a-row>

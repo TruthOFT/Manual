@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
-import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { message } from 'ant-design-vue'
+import {
+    PlusOutlined,
+    SearchOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    EyeOutlined,
+} from '@ant-design/icons-vue'
 
 import {
     createAdminCustomer,
@@ -13,25 +19,27 @@ import {
 import type { AdminCustomer, AdminCustomerSaveRequest } from '@/types/customer'
 
 const columns = [
-    { title: '账号', dataIndex: 'userAccount', key: 'userAccount' },
-    { title: '昵称', dataIndex: 'userName', key: 'userName' },
-    { title: '手机', dataIndex: 'phone', key: 'phone' },
+    { title: '头像', dataIndex: 'avatarUrl', key: 'avatar' },
+    { title: '顾客信息', dataIndex: 'userName', key: 'userInfo' },
     { title: '等级', dataIndex: 'customerLevel', key: 'customerLevel' },
     { title: '积分', dataIndex: 'points', key: 'points' },
     { title: '累计消费', dataIndex: 'totalAmount', key: 'totalAmount' },
     { title: '订单数', dataIndex: 'orderCount', key: 'orderCount' },
-    { title: '状态', dataIndex: 'userStatus', key: 'userStatus' },
+    { title: '状态', dataIndex: 'userStatus', key: 'status' },
     { title: '操作', key: 'action' },
 ]
 
 const loading = ref(false)
 const saving = ref(false)
 const modalVisible = ref(false)
+const detailVisible = ref(false)
+const detailLoading = ref(false)
 const isEditMode = ref(false)
 const currentEditId = ref('')
-const keyword = ref('')
+const searchKeyword = ref('')
 const userStatus = ref<number | undefined>()
 const customers = ref<AdminCustomer[]>([])
+const currentCustomer = ref<AdminCustomer | null>(null)
 
 const form = reactive<AdminCustomerSaveRequest>({
     userAccount: '',
@@ -50,6 +58,22 @@ const form = reactive<AdminCustomerSaveRequest>({
 })
 
 const modalTitle = computed(() => (isEditMode.value ? '编辑顾客' : '新增顾客'))
+
+const pagination = computed(() => ({
+    pageSize: 10,
+    total: customers.value.length,
+    showSizeChanger: false,
+    showQuickJumper: false,
+    showTotal: (total: number) => `共 ${total} 条记录`,
+}))
+
+function formatAmount(value: number | string | null | undefined) {
+    return Number(value ?? 0).toFixed(2)
+}
+
+function handleSearch() {
+    void loadCustomers()
+}
 
 function resetForm() {
     Object.assign(form, {
@@ -75,6 +99,10 @@ function getStatusText(status: number) {
     return status === 1 ? '禁用' : '正常'
 }
 
+function getStatusColor(status: number) {
+    return status === 1 ? 'red' : 'green'
+}
+
 function buildPayload(): AdminCustomerSaveRequest {
     return {
         userAccount: form.userAccount,
@@ -97,7 +125,7 @@ async function loadCustomers() {
     loading.value = true
     try {
         customers.value = await getAdminCustomers({
-            keyword: keyword.value || undefined,
+            keyword: searchKeyword.value || undefined,
             userStatus: userStatus.value,
         })
     } catch (error) {
@@ -110,6 +138,19 @@ async function loadCustomers() {
 function openCreateModal() {
     resetForm()
     modalVisible.value = true
+}
+
+async function openDetailModal(userId: string) {
+    detailVisible.value = true
+    detailLoading.value = true
+    try {
+        currentCustomer.value = await getAdminCustomerDetail(userId)
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '加载顾客详情失败')
+        detailVisible.value = false
+    } finally {
+        detailLoading.value = false
+    }
 }
 
 async function openEditModal(userId: string) {
@@ -155,17 +196,17 @@ async function handleSave() {
     }
 }
 
-function handleDelete(userId: string) {
-    Modal.confirm({
-        title: '确认删除该顾客？',
-        okText: '删除',
-        okType: 'danger',
-        cancelText: '取消',
-        async onOk() {
-            await deleteAdminCustomer(userId)
-            await loadCustomers()
-        },
-    })
+async function handleDelete(userId: string) {
+    try {
+        await deleteAdminCustomer(userId)
+        if (currentCustomer.value?.userId === userId) {
+            currentCustomer.value = null
+            detailVisible.value = false
+        }
+        await loadCustomers()
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '删除顾客失败')
+    }
 }
 
 onMounted(() => {
@@ -174,63 +215,137 @@ onMounted(() => {
 </script>
 
 <template>
-    <a-card class="panel" :bordered="false" title="顾客管理">
-        <template #extra>
-            <a-space>
-                <a-button @click="loadCustomers">
-                    <ReloadOutlined />
-                    刷新
-                </a-button>
-                <a-button type="primary" @click="openCreateModal">
-                    <PlusOutlined />
-                    新增顾客
-                </a-button>
-            </a-space>
-        </template>
-
-        <div class="toolbar">
-            <a-input v-model:value="keyword" size="large" placeholder="搜索账号、昵称、手机或标签" @press-enter="loadCustomers" />
-            <a-select v-model:value="userStatus" allow-clear size="large" placeholder="账号状态">
-                <a-select-option :value="0">正常</a-select-option>
-                <a-select-option :value="1">禁用</a-select-option>
-            </a-select>
-            <a-button type="primary" size="large" @click="loadCustomers">查询</a-button>
+    <div class="customers-view">
+        <div class="page-header">
+            <div class="header-left">
+                <span class="header-icon">👥</span>
+                <div>
+                    <h2>顾客管理</h2>
+                    <p>管理顾客信息，分析顾客需求</p>
+                </div>
+            </div>
+            <a-button type="primary" size="large" class="add-btn" @click="openCreateModal">
+                <PlusOutlined />
+                新增顾客
+            </a-button>
         </div>
 
-        <a-table
-            :columns="columns"
-            :data-source="customers"
-            :loading="loading"
-            :pagination="{ pageSize: 8 }"
-            row-key="userId"
-        >
-            <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'userStatus'">
-                    <a-tag :color="record.userStatus === 1 ? 'red' : 'green'">
-                        {{ getStatusText(record.userStatus) }}
+        <a-card class="filter-card" :bordered="false">
+            <a-space size="large" wrap>
+                <a-input-search
+                    v-model:value="searchKeyword"
+                    placeholder="搜索顾客名称或手机号..."
+                    style="width: 320px"
+                    @search="handleSearch"
+                >
+                    <template #prefix>
+                        <SearchOutlined />
+                    </template>
+                </a-input-search>
+            </a-space>
+        </a-card>
+
+        <a-card class="table-card" :bordered="false" :loading="loading">
+            <a-table
+                :columns="columns"
+                :data-source="customers"
+                :pagination="pagination"
+                row-key="userId"
+            >
+                <template #bodyCell="{ column, record }">
+                    <template v-if="column.key === 'avatar'">
+                        <a-avatar :size="48">
+                            {{ (record.userName || record.userAccount)?.slice(0, 1) }}
+                        </a-avatar>
+                    </template>
+
+                    <template v-if="column.key === 'userInfo'">
+                        <div>
+                            <strong>{{ record.userName || record.userAccount }}</strong>
+                            <p style="margin: 4px 0 0; color: #64748b; font-size: 0.85rem;">
+                                {{ record.phone || '暂无手机号' }}
+                            </p>
+                        </div>
+                    </template>
+
+                    <template v-if="column.key === 'status'">
+                        <a-tag :color="getStatusColor(record.userStatus)">
+                            {{ getStatusText(record.userStatus) }}
+                        </a-tag>
+                    </template>
+
+                    <template v-if="column.key === 'totalAmount'">
+                        ￥{{ formatAmount(record.totalAmount) }}
+                    </template>
+
+                    <template v-if="column.key === 'action'">
+                        <a-space>
+                            <a-button type="link" size="small" @click="openDetailModal(record.userId)">
+                                <EyeOutlined />
+                                查看
+                            </a-button>
+                            <a-button type="link" size="small" @click="openEditModal(record.userId)">
+                                <EditOutlined />
+                                编辑
+                            </a-button>
+                            <a-popconfirm
+                                title="确定删除该顾客吗？"
+                                @confirm="handleDelete(record.userId)"
+                            >
+                                <a-button type="link" size="small" danger>
+                                    <DeleteOutlined />
+                                    删除
+                                </a-button>
+                            </a-popconfirm>
+                        </a-space>
+                    </template>
+                </template>
+            </a-table>
+        </a-card>
+    </div>
+
+    <a-modal
+        v-model:open="detailVisible"
+        title="顾客详情"
+        :footer="null"
+        width="760px"
+    >
+        <a-skeleton v-if="detailLoading" active :paragraph="{ rows: 8 }" />
+        <div v-else-if="currentCustomer" class="detail-grid">
+            <div class="detail-head">
+                <a-avatar :size="64">
+                    {{ (currentCustomer.userName || currentCustomer.userAccount)?.slice(0, 1) }}
+                </a-avatar>
+                <div>
+                    <h3>{{ currentCustomer.userName || currentCustomer.userAccount }}</h3>
+                    <p>{{ currentCustomer.phone || '暂无手机号' }}</p>
+                    <a-tag :color="getStatusColor(currentCustomer.userStatus)">
+                        {{ getStatusText(currentCustomer.userStatus) }}
                     </a-tag>
-                </template>
-                <template v-else-if="column.key === 'phone'">
-                    {{ record.phone || '-' }}
-                </template>
-                <template v-else-if="column.key === 'totalAmount'">
-                    ￥{{ record.totalAmount }}
-                </template>
-                <template v-else-if="column.key === 'action'">
-                    <a-space>
-                        <a-button size="small" @click="openEditModal(record.userId)">
-                            <EditOutlined />
-                            编辑
-                        </a-button>
-                        <a-button danger size="small" @click="handleDelete(record.userId)">
-                            <DeleteOutlined />
-                            删除
-                        </a-button>
-                    </a-space>
-                </template>
-            </template>
-        </a-table>
-    </a-card>
+                </div>
+            </div>
+            <a-descriptions bordered :column="2" size="small">
+                <a-descriptions-item label="账号">{{ currentCustomer.userAccount }}</a-descriptions-item>
+                <a-descriptions-item label="邮箱">{{ currentCustomer.email || '-' }}</a-descriptions-item>
+                <a-descriptions-item label="等级">{{ currentCustomer.customerLevel }}</a-descriptions-item>
+                <a-descriptions-item label="积分">{{ currentCustomer.points }}</a-descriptions-item>
+                <a-descriptions-item label="累计消费">￥{{ formatAmount(currentCustomer.totalAmount) }}</a-descriptions-item>
+                <a-descriptions-item label="订单数">{{ currentCustomer.orderCount }}</a-descriptions-item>
+                <a-descriptions-item label="偏好标签" :span="2">
+                    {{ currentCustomer.preferenceTags || '-' }}
+                </a-descriptions-item>
+                <a-descriptions-item label="最近购买" :span="2">
+                    {{ currentCustomer.lastPurchaseTime || '-' }}
+                </a-descriptions-item>
+            </a-descriptions>
+            <div class="detail-actions">
+                <a-button @click="openEditModal(currentCustomer.userId)">
+                    <EditOutlined />
+                    编辑
+                </a-button>
+            </div>
+        </div>
+    </a-modal>
 
     <a-modal
         v-model:open="modalVisible"
@@ -287,25 +402,114 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.panel {
-    border-radius: 28px;
-    background: var(--surface);
-    box-shadow: var(--shadow);
+.customers-view {
+    display: grid;
+    gap: 20px;
 }
 
-.toolbar,
-.form-grid {
-    display: grid;
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
     gap: 16px;
 }
 
-.toolbar {
-    grid-template-columns: minmax(0, 1fr) 220px auto;
-    margin-bottom: 18px;
+.header-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.page-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.page-header p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.add-btn {
+    border-radius: 12px;
+    height: 44px;
+    padding: 0 24px;
+    font-weight: 600;
+}
+
+.filter-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.filter-card :deep(.ant-card-body) {
+    padding: 20px;
+}
+
+.table-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.table-card :deep(.ant-card-body) {
+    padding: 24px;
+}
+
+:deep(.ant-table-thead > tr > th) {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+}
+
+:deep(.ant-table-tbody > tr:hover > td) {
+    background: #f1f5f9;
+}
+
+:deep(.ant-pagination) {
+    margin-top: 20px;
+}
+
+.detail-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.detail-head {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+}
+
+.detail-head h3 {
+    margin: 0 0 4px;
+    color: #1e293b;
+}
+
+.detail-head p {
+    margin: 0 0 8px;
+    color: #64748b;
+}
+
+.detail-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .form-grid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
 }
 
 .full-width {
@@ -317,9 +521,12 @@ onMounted(() => {
 }
 
 @media (max-width: 980px) {
-    .toolbar,
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .full-span {
+        grid-column: auto;
     }
 }
 </style>

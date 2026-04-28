@@ -136,6 +136,17 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void cleanupProductRecommendations(Long productId) {
+        if (productId == null || productId <= 0) {
+            return;
+        }
+        recommendationMapper.deactivateProductBehaviors(productId);
+        recommendationMapper.deactivateProductSimilaritiesByProduct(productId);
+        recommendationMapper.deactivateUserRecommendationsByProduct(productId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void refreshUserRecommendations(Long userId) {
         if (userId == null || userId <= 0) {
             return;

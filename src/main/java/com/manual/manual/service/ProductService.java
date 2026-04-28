@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface ProductService {
 
-    ProductListPageVO listProducts(Long categoryId, String originPlace, String materialName);
+    ProductListPageVO listProducts(Long categoryId, String originPlace, String priceRange);
 
     ProductDetailVO getProductDetail(Long productId);
 

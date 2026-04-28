@@ -10,6 +10,7 @@ type ProductListParams = {
     auditStatus?: number
     status?: number
     keyword?: string
+    categoryId?: string
 }
 
 export function getAdminProducts(params: ProductListParams = {}) {

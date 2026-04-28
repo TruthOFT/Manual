@@ -15,9 +15,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/user")
@@ -70,5 +73,16 @@ public class UserController {
     @PostMapping("/recharge")
     public BaseResponse<LoginUserVO> recharge(@RequestBody UserRechargeRequest rechargeRequest, HttpServletRequest request) {
         return ResultUtils.success(userService.rechargeBalance(rechargeRequest, request), "充值成功");
+    }
+
+    @PostMapping("/upload/avatar")
+    public BaseResponse<LoginUserVO> uploadAvatar(@RequestParam("file") MultipartFile file,
+                                                  HttpServletRequest request,
+                                                  HttpServletResponse response) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请选择头像文件");
+        }
+        LoginUserVO updatedUser = userService.uploadAvatar(file, request, response);
+        return ResultUtils.success(updatedUser, "头像上传成功");
     }
 }

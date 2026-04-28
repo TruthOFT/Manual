@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import {
-    CheckOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    EyeOutlined,
-    PlusOutlined,
-    ReloadOutlined,
-} from '@ant-design/icons-vue'
-import { message, Modal } from 'ant-design-vue'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { message } from 'ant-design-vue'
+import {
+    PlusOutlined,
+    SearchOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    EyeOutlined,
+} from '@ant-design/icons-vue'
 
 import {
     approveAdminProduct,
@@ -20,7 +19,7 @@ import {
     updateAdminProduct,
 } from '@/api/product'
 import { API_CONTEXT_PATH, BASE_URL } from '@/api/request'
-import { uploadFile } from '@/api/upload'
+import { resolveUploadUrl, uploadFile } from '@/api/upload'
 import type {
     AdminProductDetail,
     AdminProductListItem,
@@ -39,12 +38,11 @@ type AdminProductForm = Omit<AdminProductSaveRequest, 'skus'> & {
 }
 
 const columns = [
+    { title: '商品封面', dataIndex: 'productCover', key: 'productCover' },
     { title: '商品名称', dataIndex: 'productName', key: 'productName' },
     { title: '分类', dataIndex: 'categoryName', key: 'categoryName' },
-    { title: '库存', dataIndex: 'inventory', key: 'inventory' },
+    { title: '价格', dataIndex: 'price', key: 'price' },
     { title: '上架状态', dataIndex: 'status', key: 'status' },
-    { title: '价格区间', key: 'priceRange' },
-    { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime' },
     { title: '操作', key: 'action' },
 ]
 
@@ -57,9 +55,8 @@ const drawerVisible = ref(false)
 const modalVisible = ref(false)
 const isEditMode = ref(false)
 const currentEditId = ref('')
-const keyword = ref('')
-const auditStatus = ref<number | undefined>()
-const status = ref<number | undefined>()
+const searchKeyword = ref('')
+const selectedCategory = ref('')
 const products = ref<AdminProductListItem[]>([])
 const currentProduct = ref<AdminProductDetail | null>(null)
 const meta = ref<AdminProductMeta>({
@@ -107,9 +104,15 @@ const form = reactive<AdminProductForm>({
     skus: [createDefaultSkuRow()],
 })
 
-const pendingCount = computed(() => products.value.filter((item) => item.auditStatus === 0).length)
-const onShelfCount = computed(() => products.value.filter((item) => item.status === 1).length)
-const totalCount = computed(() => products.value.length)
+const pagination = computed(() => ({
+    pageSize: 10,
+    total: products.value.length,
+    showSizeChanger: false,
+    showQuickJumper: false,
+    showTotal: (total: number) => `共 ${total} 条记录`,
+}))
+
+const categories = computed(() => meta.value.categories)
 const modalTitle = computed(() => (isEditMode.value ? '编辑商品' : '新增商品'))
 const displayProductCoverUrl = computed(() => coverPreviewUrl.value || resolveImageUrl(form.productCover))
 
@@ -466,9 +469,8 @@ async function loadProducts() {
     loading.value = true
     try {
         products.value = await getAdminProducts({
-            keyword: keyword.value || undefined,
-            auditStatus: auditStatus.value,
-            status: status.value,
+            keyword: searchKeyword.value || undefined,
+            categoryId: selectedCategory.value || undefined,
         })
     } catch (error) {
         message.error(error instanceof Error ? error.message : '加载商品列表失败')
@@ -578,26 +580,17 @@ async function handleSave() {
     }
 }
 
-function handleDelete(productId: string) {
-    Modal.confirm({
-        title: '确认删除该商品？',
-        content: '删除后该商品会被逻辑删除，商品图片、材质和 SKU 也会同步逻辑删除。',
-        okText: '删除',
-        okType: 'danger',
-        cancelText: '取消',
-        async onOk() {
-            try {
-                await deleteAdminProduct(productId)
-                if (currentProduct.value?.id === productId) {
-                    drawerVisible.value = false
-                    currentProduct.value = null
-                }
-                await loadProducts()
-            } catch (error) {
-                message.error(error instanceof Error ? error.message : '删除商品失败')
-            }
-        },
-    })
+async function handleDelete(productId: string) {
+    try {
+        await deleteAdminProduct(productId)
+        if (currentProduct.value?.id === productId) {
+            drawerVisible.value = false
+            currentProduct.value = null
+        }
+        await loadProducts()
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '删除商品失败')
+    }
 }
 
 async function runAuditAction(action: () => Promise<boolean>) {
@@ -622,6 +615,20 @@ async function approveCurrentProduct() {
     await runAuditAction(() => approveAdminProduct(currentProduct.value!.id))
 }
 
+function handleSearch() {
+    loadProducts()
+}
+
+function handleCategoryChange() {
+    loadProducts()
+}
+
+function handleReset() {
+    searchKeyword.value = ''
+    selectedCategory.value = ''
+    loadProducts()
+}
+
 onMounted(() => {
     void Promise.all([loadProducts(), loadMeta()])
 })
@@ -634,108 +641,105 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="products-view">
-        <a-card class="panel summary-panel" :bordered="false">
-            <div class="summary-copy">
-                <p class="eyebrow">商品管理</p>
-                <h2>全量商品管理中心</h2>
-                <p>支持商品查询、详情、审核、新增、编辑和删除，库存可在编辑表单中直接调整。</p>
-            </div>
-            <div class="summary-metrics">
-                <div class="metric-item">
-                    <strong>{{ totalCount }}</strong>
-                    <span>商品总数</span>
-                </div>
-                <div class="metric-item">
-                    <strong>{{ pendingCount }}</strong>
-                    <span>待审核</span>
-                </div>
-                <div class="metric-item">
-                    <strong>{{ onShelfCount }}</strong>
-                    <span>上架</span>
+        <div class="page-header">
+            <div class="header-left">
+                <span class="header-icon">📦</span>
+                <div>
+                    <h2>商品管理</h2>
+                    <p>管理所有商品信息，支持分类筛选</p>
                 </div>
             </div>
+            <a-button type="primary" size="large" class="add-btn" @click="openCreateModal">
+                <PlusOutlined />
+                新增商品
+            </a-button>
+        </div>
+
+        <a-card class="filter-card" :bordered="false">
+            <a-space size="large" wrap>
+                <a-input-search
+                    v-model:value="searchKeyword"
+                    placeholder="搜索商品名称..."
+                    style="width: 280px"
+                    @search="handleSearch"
+                >
+                    <template #prefix>
+                        <SearchOutlined />
+                    </template>
+                </a-input-search>
+
+                <a-select
+                    v-model:value="selectedCategory"
+                    placeholder="选择分类"
+                    style="width: 160px"
+                    @change="handleCategoryChange"
+                >
+                    <a-select-option value="">全部分类</a-select-option>
+                    <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
+                        {{ category.categoryName }}
+                    </a-select-option>
+                </a-select>
+
+                <a-button @click="handleReset">重置</a-button>
+            </a-space>
         </a-card>
 
-        <a-card class="panel" :bordered="false" title="商品列表">
-            <template #extra>
-                <a-space>
-                    <a-button :loading="metaLoading" @click="loadMeta">
-                        <ReloadOutlined />
-                        刷新元数据
-                    </a-button>
-                    <a-button @click="loadProducts">
-                        <ReloadOutlined />
-                        刷新列表
-                    </a-button>
-                    <a-button type="primary" @click="openCreateModal">
-                        <PlusOutlined />
-                        新增商品
-                    </a-button>
-                </a-space>
-            </template>
-
-            <div class="toolbar">
-                <a-input
-                    v-model:value="keyword"
-                    size="large"
-                    placeholder="搜索商品或分类"
-                    @press-enter="loadProducts"
-                />
-                <a-select v-model:value="auditStatus" allow-clear size="large" placeholder="审核状态">
-                    <a-select-option :value="-1">草稿</a-select-option>
-                    <a-select-option :value="0">待审核</a-select-option>
-                    <a-select-option :value="1">已通过</a-select-option>
-                    <a-select-option :value="2">已驳回</a-select-option>
-                </a-select>
-                <a-select v-model:value="status" allow-clear size="large" placeholder="上架状态">
-                    <a-select-option :value="1">上架</a-select-option>
-                    <a-select-option :value="0">下架</a-select-option>
-                </a-select>
-                <a-button type="primary" size="large" @click="loadProducts">查询</a-button>
-            </div>
-
-            <a-table :columns="columns" :data-source="products" :loading="loading" :pagination="{ pageSize: 8 }" row-key="id">
+        <a-card class="table-card" :bordered="false" :loading="loading">
+            <a-table
+                :columns="columns"
+                :data-source="products"
+                :pagination="pagination"
+                row-key="id"
+            >
                 <template #bodyCell="{ column, record }">
-                    <template v-if="column.key === 'productName'">
-                        <div class="product-name-cell">
-                            <a-avatar shape="square" :size="52" :src="resolveImageUrl(record.productCover)" />
-                            <div>
-                                <strong>{{ record.productName }}</strong>
-                                <p>{{ record.productSubtitle || '暂无副标题' }}</p>
-                            </div>
-                        </div>
+                    <template v-if="column.key === 'productCover'">
+                        <a-image
+                            :src="resolveUploadUrl(record.productCover)"
+                            :width="60"
+                            :height="60"
+                            style="object-fit: cover; border-radius: 8px;"
+                        />
                     </template>
-                    <template v-else-if="column.key === 'status'">
-                        <a-tag :color="getStatusColor(record.status)">
-                            {{ getStatusText(record.status) }}
+
+                    <template v-if="column.key === 'productName'">
+                        <strong>{{ record.productName }}</strong>
+                    </template>
+
+                    <template v-if="column.key === 'categoryName'">
+                        <a-tag color="blue">{{ record.categoryName }}</a-tag>
+                    </template>
+
+                    <template v-if="column.key === 'price'">
+                        <span style="color: #ef4444; font-weight: 600;">
+                            ¥{{ record.minPrice }}
+                        </span>
+                    </template>
+
+                    <template v-if="column.key === 'status'">
+                        <a-tag :color="record.status === 1 ? 'green' : 'default'">
+                            {{ record.status === 1 ? '上架' : '下架' }}
                         </a-tag>
                     </template>
-                    <template v-else-if="column.key === 'priceRange'">
-                        ¥{{ record.minPrice }} - ¥{{ record.maxPrice }}
-                    </template>
-                    <template v-else-if="column.key === 'action'">
-                        <a-space wrap>
-                            <a-button size="small" @click="openDetail(record.id)">
+
+                    <template v-if="column.key === 'action'">
+                        <a-space>
+                            <a-button type="link" size="small" @click="openDetail(record.id)">
                                 <EyeOutlined />
                                 查看
                             </a-button>
-                            <a-button size="small" @click="openEditModal(record.id)">
+                            <a-button type="link" size="small" @click="openEditModal(record.id)">
                                 <EditOutlined />
                                 编辑
                             </a-button>
-                            <a-button danger size="small" @click="handleDelete(record.id)">
-                                <DeleteOutlined />
-                                删除
-                            </a-button>
-                            <a-button
-                                v-if="record.auditStatus === 0"
-                                type="primary"
-                                size="small"
-                                @click="runAuditAction(() => approveAdminProduct(record.id))"
+                            <a-popconfirm
+                                title="确定删除该商品吗？"
+                                @confirm="handleDelete(record.id)"
                             >
-                                <CheckOutlined />
-                                通过
-                            </a-button>
+                                <a-button type="link" size="small" danger>
+                                    <DeleteOutlined />
+                                    删除
+                                </a-button>
+                            </a-popconfirm>
                         </a-space>
                     </template>
                 </template>
@@ -760,8 +764,12 @@ onBeforeUnmount(() => {
                             <p>{{ currentProduct.productSubtitle || '暂无副标题' }}</p>
                             <a-space wrap>
                                 <a-tag>{{ currentProduct.categoryName || '未分类' }}</a-tag>
-                                <a-tag :color="getAuditColor(currentProduct.auditStatus)">{{ getAuditText(currentProduct.auditStatus) }}</a-tag>
-                                <a-tag :color="getStatusColor(currentProduct.status)">{{ getStatusText(currentProduct.status) }}</a-tag>
+                                <a-tag :color="getAuditColor(currentProduct.auditStatus)">
+                                    {{ getAuditText(currentProduct.auditStatus) }}
+                                </a-tag>
+                                <a-tag :color="getStatusColor(currentProduct.status)">
+                                    {{ getStatusText(currentProduct.status) }}
+                                </a-tag>
                             </a-space>
                         </div>
                     </div>
@@ -1006,85 +1014,76 @@ onBeforeUnmount(() => {
     gap: 20px;
 }
 
-.panel {
-    border-radius: 28px;
-    background: var(--surface);
-    box-shadow: var(--shadow);
-}
-
-.summary-panel {
+.page-header {
     display: flex;
     justify-content: space-between;
-    gap: 24px;
     align-items: center;
+    padding: 8px 0;
 }
 
-.eyebrow {
-    margin: 0 0 8px;
-    color: var(--blue);
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.summary-copy h2 {
-    margin: 0;
-    color: var(--text-strong);
-    font-family: var(--font-display);
-    font-size: 2rem;
-}
-
-.summary-copy p:last-child {
-    margin: 10px 0 0;
-    color: var(--text-muted);
-}
-
-.summary-metrics {
+.header-left {
     display: flex;
-    gap: 18px;
+    align-items: center;
+    gap: 16px;
 }
 
-.metric-item {
-    display: grid;
-    justify-items: center;
-    min-width: 88px;
-}
-
-.metric-item strong {
-    color: var(--text-strong);
-    font-family: var(--font-display);
-    font-size: 2rem;
+.header-icon {
+    font-size: 2.5rem;
     line-height: 1;
 }
 
-.metric-item span {
-    color: var(--text-muted);
-    font-size: 0.86rem;
+.page-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #1e293b;
+    font-weight: 700;
 }
 
-.toolbar {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.product-name-cell {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 12px;
-    align-items: center;
-}
-
-.product-name-cell strong {
-    display: block;
-    color: var(--text-strong);
-}
-
-.product-name-cell p {
+.page-header p {
     margin: 4px 0 0;
-    color: var(--text-muted);
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.add-btn {
+    border-radius: 12px;
+    height: 44px;
+    padding: 0 24px;
+    font-weight: 600;
+}
+
+.filter-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.filter-card :deep(.ant-card-body) {
+    padding: 20px;
+}
+
+.table-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.table-card :deep(.ant-card-body) {
+    padding: 24px;
+}
+
+:deep(.ant-table-thead > tr > th) {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+}
+
+:deep(.ant-table-tbody > tr:hover > td) {
+    background: #f1f5f9;
+}
+
+:deep(.ant-pagination) {
+    margin-top: 20px;
 }
 
 .detail-grid {
@@ -1276,16 +1275,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 980px) {
-    .summary-panel {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .summary-metrics {
-        justify-content: space-between;
-    }
-
-    .toolbar,
     .meta-grid,
     .image-grid,
     .form-grid,

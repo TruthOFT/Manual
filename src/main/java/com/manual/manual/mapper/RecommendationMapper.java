@@ -306,6 +306,34 @@ public interface RecommendationMapper {
                            @Param("sourceType") Integer sourceType,
                            @Param("sourceId") Long sourceId);
 
+    @Update("""
+            update user_product_behavior
+            set isDelete = 1,
+                updateTime = now()
+            where productId = #{productId}
+              and isDelete = 0
+            """)
+    int deactivateProductBehaviors(@Param("productId") Long productId);
+
+    @Update("""
+            update product_similarity
+            set isDelete = 1,
+                updateTime = now()
+            where productId = #{productId}
+               or similarProductId = #{productId}
+              and isDelete = 0
+            """)
+    int deactivateProductSimilaritiesByProduct(@Param("productId") Long productId);
+
+    @Update("""
+            update user_product_recommend
+            set isDelete = 1,
+                updateTime = now()
+            where productId = #{productId}
+              and isDelete = 0
+            """)
+    int deactivateUserRecommendationsByProduct(@Param("productId") Long productId);
+
     @Insert("""
             insert into product_browse_log (
                 id,

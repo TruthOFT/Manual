@@ -22,6 +22,8 @@ public interface RecommendationService {
 
     void deactivateSystemBehavior(Long userId, Long productId, Integer behaviorType, Integer sourceType, Long sourceId);
 
+    void cleanupProductRecommendations(Long productId);
+
     void refreshUserRecommendations(Long userId);
 
     RecommendationOverviewVO getAdminOverview(HttpServletRequest request);

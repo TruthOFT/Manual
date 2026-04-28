@@ -8,11 +8,8 @@ import com.manual.manual.model.entity.User;
 import com.manual.manual.model.vo.product.ProductDetailVO;
 import com.manual.manual.model.vo.product.ProductFavoriteVO;
 import com.manual.manual.model.vo.product.ProductFilterOptionsVO;
-import com.manual.manual.model.vo.product.ProductImageVO;
 import com.manual.manual.model.vo.product.ProductListItemVO;
 import com.manual.manual.model.vo.product.ProductListPageVO;
-import com.manual.manual.model.vo.product.ProductMaterialVO;
-import com.manual.manual.model.vo.product.ProductReviewVO;
 import com.manual.manual.service.ProductService;
 import com.manual.manual.service.RecommendationService;
 import com.manual.manual.service.UserService;
@@ -28,6 +25,9 @@ import java.util.List;
 @Service
 public class ProductServiceImpl implements ProductService {
 
+    private static final int PUBLISHED_AUDIT_STATUS = 1;
+    private static final int PUBLISHED_STATUS = 1;
+
     @Resource
     private ProductMapper productMapper;
 
@@ -38,15 +38,32 @@ public class ProductServiceImpl implements ProductService {
     private RecommendationService recommendationService;
 
     @Override
-    public ProductListPageVO listProducts(Long categoryId, String originPlace, String materialName) {
+    public ProductListPageVO listProducts(Long categoryId, String originPlace, String priceRange) {
         ProductListPageVO productListPageVO = new ProductListPageVO();
         boolean publishedOnly = true;
         String safeOriginPlace = trim(originPlace);
-        String safeMaterialName = trim(materialName);
+        
+        Integer minPrice = null;
+        Integer maxPrice = null;
+        
+        if (priceRange != null && !priceRange.trim().isEmpty()) {
+            if (priceRange.endsWith("+")) {
+                minPrice = Integer.parseInt(priceRange.replace("+", "").trim());
+                maxPrice = null;
+            } else if (priceRange.contains("-")) {
+                String[] range = priceRange.split("-");
+                if (range.length == 2) {
+                    minPrice = Integer.parseInt(range[0].trim());
+                    maxPrice = Integer.parseInt(range[1].trim());
+                }
+            }
+        }
+        
         List<ProductListItemVO> products = defaultList(productMapper.selectProducts(
                 categoryId,
                 safeOriginPlace,
-                safeMaterialName,
+                minPrice,
+                maxPrice,
                 publishedOnly
         ));
         if (products.isEmpty()) {
@@ -54,7 +71,8 @@ public class ProductServiceImpl implements ProductService {
             products = defaultList(productMapper.selectProducts(
                     categoryId,
                     safeOriginPlace,
-                    safeMaterialName,
+                    minPrice,
+                    maxPrice,
                     publishedOnly
             ));
         }

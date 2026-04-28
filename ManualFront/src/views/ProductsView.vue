@@ -14,13 +14,20 @@ const loading = ref(false)
 const errorMessage = ref('')
 const pageData = ref<ProductListPageData | null>(null)
 
-const filtersVisible = ref(false)
 const selectedCategoryId = ref('')
 const selectedOriginPlace = ref('')
-const selectedMaterialName = ref('')
+const selectedPriceRange = ref('')
 
 const products = computed(() => pageData.value?.products ?? [])
 const filterOptions = computed(() => pageData.value?.filters ?? { categories: [], originPlaces: [], materials: [] })
+
+const priceRanges = [
+    { label: '全部价格', value: '' },
+    { label: '0-10 元', value: '0-10' },
+    { label: '11-50 元', value: '11-50' },
+    { label: '51-100 元', value: '51-100' },
+    { label: '100 元以上', value: '100+' },
+]
 
 async function loadProducts() {
     loading.value = true
@@ -29,7 +36,7 @@ async function loadProducts() {
         pageData.value = await getProductList({
             categoryId: selectedCategoryId.value || undefined,
             originPlace: selectedOriginPlace.value || undefined,
-            materialName: selectedMaterialName.value || undefined,
+            priceRange: selectedPriceRange.value || undefined,
         })
     } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '加载作品数据失败，请稍后重试。'
@@ -63,8 +70,8 @@ function handleCategoryChange(categoryId: string) {
     void syncCategoryQuery(categoryId)
 }
 
-function toggleFiltersVisible() {
-    filtersVisible.value = !filtersVisible.value
+function handlePriceRangeChange() {
+    void loadProducts()
 }
 
 function getPriceRange(minPrice: number, maxPrice: number) {
@@ -108,18 +115,7 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
         </section>
 
         <section class="shell section">
-            <div class="filter-toggle-bar">
-                <a-button
-                    class="manual-ant-btn manual-ant-btn-soft"
-                    size="large"
-                    :aria-expanded="filtersVisible"
-                    @click="toggleFiltersVisible"
-                >
-                    过滤
-                </a-button>
-            </div>
-
-            <a-card v-if="filtersVisible" class="soft-card filter-panel" :bordered="false">
+            <a-card class="soft-card filter-panel" :bordered="false">
                 <div class="filter-grid">
                     <label class="filter-field">
                         <span>分类</span>
@@ -146,11 +142,14 @@ watch(() => route.query.categoryId, (queryCategoryId) => {
                     </label>
 
                     <label class="filter-field">
-                        <span>材料类型</span>
-                        <a-select v-model:value="selectedMaterialName" @change="loadProducts">
-                            <a-select-option value="">全部材料</a-select-option>
-                            <a-select-option v-for="material in filterOptions.materials" :key="material" :value="material">
-                                {{ material }}
+                        <span>价格</span>
+                        <a-select v-model:value="selectedPriceRange" @change="handlePriceRangeChange">
+                            <a-select-option
+                                v-for="range in priceRanges"
+                                :key="range.value"
+                                :value="range.value"
+                            >
+                                {{ range.label }}
                             </a-select-option>
                         </a-select>
                     </label>
@@ -256,8 +255,12 @@ h3 {
 }
 
 h1 {
-    font-size: clamp(2.8rem, 5vw, 4.8rem);
-    line-height: 0.98;
+    font-size: clamp(2.4rem, 4.5vw, 4rem);
+    line-height: 1.4;
+    letter-spacing: 2px;
+    color: #d4a555;
+    font-family: 'KaiTi', 'STKaiti', 'SimSun', 'Georgia', serif;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 h3 {
@@ -279,12 +282,6 @@ h3 {
     padding: 24px;
 }
 
-.filter-toggle-bar {
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 18px;
-}
-
 .filter-grid {
     display: grid;
     gap: 18px;
@@ -302,25 +299,44 @@ h3 {
     font-weight: 700;
 }
 
-.product-card {
-    cursor: pointer;
-    transition: all 0.3s ease;
+@media (max-width: 760px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
-.product-card:hover {
-    background: rgba(255, 253, 248, 0.95);
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(126, 69, 47, 0.08);
+.product-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card :deep(.ant-card-cover) {
+    overflow: hidden;
 }
 
 .product-card :deep(.ant-card-cover img) {
-    height: 240px;
+    width: 100%;
+    height: 280px;
     object-fit: cover;
+    display: block;
 }
 
 .product-card :deep(.ant-card-body) {
-    display: grid;
-    gap: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.product-card h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.product-card p {
+    margin: 0;
+    font-size: 0.92rem;
 }
 
 .product-top,
@@ -328,6 +344,10 @@ h3 {
     display: flex;
     justify-content: space-between;
     gap: 12px;
+}
+
+.product-card .product-foot {
+    margin-top: auto;
 }
 
 .product-foot {
@@ -350,23 +370,5 @@ h3 {
 
 .text-link:hover {
     color: var(--coral-deep);
-}
-
-@media (max-width: 900px) {
-    .filter-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 760px) {
-    .page {
-        padding: 16px 16px 56px;
-    }
-
-    .product-top,
-    .product-foot {
-        flex-direction: column;
-        align-items: flex-start;
-    }
 }
 </style>

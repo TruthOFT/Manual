@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
+import {
+    ArrowUpOutlined,
+    ArrowDownOutlined,
+    DollarOutlined,
+    ShoppingCartOutlined,
+    UserAddOutlined,
+    WarningOutlined,
+} from '@ant-design/icons-vue'
 
 import { getAdminDashboardOverview } from '@/api/dashboard'
 import type { AdminDashboardOverview } from '@/types/dashboard'
 
-const pageEyebrow = '\u7ba1\u7406\u5458\u6982\u89c8'
-const pageTitle = '\u5e73\u53f0\u5b9e\u65f6\u8fd0\u8425\u9762\u677f'
-const refreshLabel = '\u5237\u65b0\u6570\u636e'
-const todoTitle = '\u4eca\u65e5\u5f85\u529e'
-const trendTitle = '\u7ecf\u8425\u5feb\u7167'
-const errorDescription = '\u5f53\u524d\u5c55\u793a\u7684\u662f\u6700\u8fd1\u4e00\u6b21\u6210\u529f\u52a0\u8f7d\u7684\u6570\u636e\uff0c\u8bf7\u68c0\u67e5\u540e\u53f0\u670d\u52a1\u6216\u7ba1\u7406\u5458\u767b\u5f55\u72b6\u6001\u3002'
-const refreshSuccessMessage = '\u7ba1\u7406\u5458\u9996\u9875\u6570\u636e\u5df2\u5237\u65b0'
-const loadErrorMessage = '\u7ba1\u7406\u5458\u9996\u9875\u6570\u636e\u52a0\u8f7d\u5931\u8d25'
+const pageEyebrow = '管理员概览'
+const pageTitle = '平台实时运营面板'
+const refreshLabel = '刷新数据'
+const todoTitle = '今日待办'
+const trendTitle = '经营快照'
+const errorDescription = '当前展示的是最近一次成功加载的数据，请检查后台服务或管理员登录状态。'
+const refreshSuccessMessage = '管理员首页数据已刷新'
+const loadErrorMessage = '管理员首页数据加载失败'
 
 const emptyOverview: AdminDashboardOverview = {
     pendingAuditProductCount: 0,
@@ -32,64 +40,87 @@ const emptyOverview: AdminDashboardOverview = {
 const loading = ref(false)
 const errorMessage = ref('')
 const overview = ref<AdminDashboardOverview>(emptyOverview)
+const lastUpdateTime = ref('')
 
 const metrics = computed(() => [
     {
-        label: '\u5f85\u5904\u7406\u8ba2\u5355',
+        label: '待处理订单',
         value: formatCount(overview.value.pendingOrderCount),
-        note: '\u4f18\u5148\u5173\u6ce8\u8d85\u65f6\u672a\u53d1\u8d27\u548c\u5730\u5740\u5f02\u5e38\u8ba2\u5355\u3002',
-        detail: `\u5f85\u53d1\u8d27 ${formatCount(overview.value.pendingShipmentOrderCount)} \u5355\uff0c\u5730\u5740\u5f02\u5e38 ${formatCount(overview.value.abnormalAddressOrderCount)} \u5355\u3002`,
+        note: '优先关注超时未发货和地址异常订单。',
+        detail: `待发货 ${formatCount(overview.value.pendingShipmentOrderCount)} 单，地址异常 ${formatCount(overview.value.abnormalAddressOrderCount)} 单。`,
         color: '#17a36b',
+        icon: ShoppingCartOutlined,
     },
     {
-        label: '\u6d3b\u8dc3\u987e\u5ba2',
+        label: '活跃顾客',
         value: formatCount(overview.value.activeCustomerCount),
-        note: '\u8fd1 7 \u5929\u6709\u4e0b\u5355\u884c\u4e3a\u7684\u987e\u5ba2\u6570\u3002',
-        detail: '\u6309\u8fd1 7 \u5929\u8ba2\u5355\u521b\u5efa\u8bb0\u5f55\u5b9e\u65f6\u7edf\u8ba1\u3002',
+        note: '近 7 天有下单行为的顾客数。',
+        detail: '按近 7 天订单创建记录实时统计。',
         color: '#f0a22e',
+        icon: UserAddOutlined,
     },
     {
-        label: '\u98ce\u9669\u63d0\u9192',
+        label: '风险提醒',
         value: formatCount(overview.value.riskAlertCount),
-        note: '\u5305\u542b\u5e93\u5b58\u6ce2\u52a8\u3001\u8bc4\u4ef7\u9884\u8b66\u548c\u552e\u540e\u5f02\u5e38\u3002',
-        detail: `\u4f4e\u5e93\u5b58 ${formatCount(overview.value.lowStockRiskCount)}\uff0c\u9000\u6b3e\u7533\u8bf7 ${formatCount(overview.value.refundAlertCount)}\uff0c\u4f4e\u5206\u8bc4\u4ef7 ${formatCount(overview.value.negativeReviewRiskCount)}\u3002`,
+        note: '包含库存波动、评价预警和售后异常。',
+        detail: `低库存 ${formatCount(overview.value.lowStockRiskCount)}，退款申请 ${formatCount(overview.value.refundAlertCount)}，低分评价 ${formatCount(overview.value.negativeReviewRiskCount)}。`,
         color: '#f1707d',
+        icon: WarningOutlined,
     },
 ])
 
+const quickActions = [
+    { label: '商品管理', path: '/products', icon: '📦', color: '#4f46e5' },
+    { label: '订单管理', path: '/orders', icon: '📋', color: '#10b981' },
+    { label: '顾客管理', path: '/customers', icon: '👥', color: '#f59e0b' },
+    { label: '优惠券管理', path: '/coupons', icon: '🎫', color: '#ef4444' },
+]
+
 const todoItems = computed(() => [
     {
-        title: '\u5f85\u53d1\u8d27\u8ba2\u5355',
-        owner: `${formatCount(overview.value.pendingShipmentOrderCount)} \u5355\u5f85\u8ddf\u8fdb`,
-        tagText: '\u4f18\u5148',
+        title: '待发货订单',
+        owner: `${formatCount(overview.value.pendingShipmentOrderCount)} 单待跟进`,
+        tagText: '优先',
         tagColor: 'gold',
+        path: '/orders',
     },
     {
-        title: '\u5730\u5740\u5f02\u5e38\u8ba2\u5355',
-        owner: `${formatCount(overview.value.abnormalAddressOrderCount)} \u5355\u9700\u6821\u9a8c`,
-        tagText: '\u6838\u5bf9',
+        title: '地址异常订单',
+        owner: `${formatCount(overview.value.abnormalAddressOrderCount)} 单需校验`,
+        tagText: '核对',
         tagColor: 'volcano',
+        path: '/orders',
+    },
+    {
+        title: '待审核商品',
+        owner: `${formatCount(overview.value.pendingAuditProductCount)} 件待审核`,
+        tagText: '审核',
+        tagColor: 'blue',
+        path: '/products',
     },
 ])
 
 const trendItems = computed(() => [
     {
-        label: '\u8fd1 7 \u65e5 GMV',
+        label: '近 7 日 GMV',
         value: formatCurrency(overview.value.recentSevenDaysGmv),
-        trend: `${formatCount(overview.value.recentSevenDaysOrderCount)} \u7b14\u8ba2\u5355`,
+        trend: `${formatCount(overview.value.recentSevenDaysOrderCount)} 笔订单`,
         tagColor: 'green',
+        icon: DollarOutlined,
     },
     {
-        label: '\u8fd1 7 \u65e5\u8ba2\u5355\u6570',
+        label: '近 7 日订单数',
         value: formatCount(overview.value.recentSevenDaysOrderCount),
-        trend: '\u6309\u8ba2\u5355\u521b\u5efa\u65f6\u95f4\u7edf\u8ba1',
+        trend: '按订单创建时间统计',
         tagColor: 'blue',
+        icon: ShoppingCartOutlined,
     },
     {
-        label: '\u8fd1 7 \u65e5\u65b0\u589e\u7528\u6237',
+        label: '近 7 日新增用户',
         value: formatCount(overview.value.recentSevenDaysNewUserCount),
-        trend: '\u4e0d\u542b\u7ba1\u7406\u5458\u8d26\u53f7',
+        trend: '不含管理员账号',
         tagColor: 'purple',
+        icon: UserAddOutlined,
     },
 ])
 
@@ -98,6 +129,7 @@ async function loadOverview(showSuccess = false) {
     errorMessage.value = ''
     try {
         overview.value = await getAdminDashboardOverview()
+        lastUpdateTime.value = new Date().toLocaleString('zh-CN')
         if (showSuccess) {
             message.success(refreshSuccessMessage)
         }
@@ -139,8 +171,11 @@ onMounted(() => {
             <div>
                 <p class="page-eyebrow">{{ pageEyebrow }}</p>
                 <h2>{{ pageTitle }}</h2>
+                <p v-if="lastUpdateTime" class="update-time">最后更新：{{ lastUpdateTime }}</p>
             </div>
-            <a-button class="refresh-btn" type="primary" :loading="loading" @click="handleRefresh">{{ refreshLabel }}</a-button>
+            <a-button class="refresh-btn" type="primary" :loading="loading" @click="handleRefresh">
+                {{ refreshLabel }}
+            </a-button>
         </section>
 
         <a-alert
@@ -152,9 +187,24 @@ onMounted(() => {
             :description="errorDescription"
         />
 
+        <section class="quick-actions">
+            <RouterLink
+                v-for="action in quickActions"
+                :key="action.path"
+                :to="action.path"
+                class="quick-action-card"
+            >
+                <span class="action-icon">{{ action.icon }}</span>
+                <span class="action-label">{{ action.label }}</span>
+            </RouterLink>
+        </section>
+
         <section class="stats-grid">
             <a-card v-for="item in metrics" :key="item.label" class="panel stat-card" :bordered="false" :loading="loading">
-                <span class="stat-label">{{ item.label }}</span>
+                <div class="stat-header">
+                    <span class="stat-label">{{ item.label }}</span>
+                    <component :is="item.icon" class="stat-icon" :style="{ color: item.color }" />
+                </div>
                 <strong :style="{ color: item.color }">{{ item.value }}</strong>
                 <p>{{ item.note }}</p>
                 <small>{{ item.detail }}</small>
@@ -164,21 +214,31 @@ onMounted(() => {
         <section class="content-grid">
             <a-card class="panel" :bordered="false" :title="todoTitle" :loading="loading">
                 <div class="todo-list">
-                    <div v-for="item in todoItems" :key="item.title" class="todo-item">
+                    <RouterLink
+                        v-for="item in todoItems"
+                        :key="item.title"
+                        :to="item.path"
+                        class="todo-item"
+                    >
                         <div>
                             <strong>{{ item.title }}</strong>
                             <p>{{ item.owner }}</p>
                         </div>
                         <a-tag :color="item.tagColor">{{ item.tagText }}</a-tag>
-                    </div>
+                    </RouterLink>
                 </div>
             </a-card>
 
             <a-card class="panel" :bordered="false" :title="trendTitle" :loading="loading">
                 <div class="trend-list">
                     <div v-for="item in trendItems" :key="item.label" class="trend-item">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.value }}</strong>
+                        <div class="trend-left">
+                            <component :is="item.icon" class="trend-icon" />
+                            <div>
+                                <span>{{ item.label }}</span>
+                                <strong>{{ item.value }}</strong>
+                            </div>
+                        </div>
                         <a-tag :color="item.tagColor">{{ item.trend }}</a-tag>
                     </div>
                 </div>
@@ -222,12 +282,52 @@ onMounted(() => {
     text-transform: uppercase;
 }
 
+.update-time {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
 .refresh-btn {
     min-width: 120px;
 }
 
 .page-alert {
     border-radius: 20px;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.quick-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    border-radius: 20px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.quick-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.action-icon {
+    font-size: 2rem;
+}
+
+.action-label {
+    color: var(--text-strong);
+    font-weight: 600;
+    font-size: 0.95rem;
 }
 
 .stats-grid {
@@ -249,9 +349,19 @@ onMounted(() => {
     gap: 12px;
 }
 
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .stat-label {
     color: var(--text-muted);
     font-size: 0.92rem;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
 }
 
 .stat-card strong {
@@ -269,7 +379,27 @@ onMounted(() => {
     font-size: 0.88rem;
 }
 
-.todo-item,
+.todo-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 18px;
+    border-radius: 20px;
+    background: var(--bg-accent);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.todo-item:hover {
+    background: var(--bg-accent-hover, #f0f4ff);
+    transform: translateX(4px);
+}
+
+.todo-item strong {
+    color: var(--text-strong);
+}
+
 .trend-item {
     display: flex;
     justify-content: space-between;
@@ -280,23 +410,32 @@ onMounted(() => {
     background: var(--bg-accent);
 }
 
-.todo-item strong,
-.trend-item strong {
-    color: var(--text-strong);
+.trend-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.trend-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+.trend-icon {
+    font-size: 1.3rem;
+    color: var(--blue);
+}
+
+.trend-item strong {
+    color: var(--text-strong);
+    display: block;
+    margin-top: 4px;
 }
 
 .trend-item span {
     color: var(--text-muted);
+    font-size: 0.88rem;
 }
 
 @media (max-width: 1100px) {
     .stats-grid,
-    .content-grid {
+    .content-grid,
+    .quick-actions {
         grid-template-columns: 1fr;
     }
 
@@ -312,8 +451,8 @@ onMounted(() => {
     }
 
     .trend-item {
-        grid-template-columns: 1fr;
-        justify-items: start;
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>

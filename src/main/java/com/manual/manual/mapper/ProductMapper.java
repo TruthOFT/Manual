@@ -39,7 +39,6 @@ public interface ProductMapper {
             "    p.updateTime",
             "from product p",
             "inner join category c on c.id = p.categoryId",
-            "left join product_material pm on pm.productId = p.id and pm.isDelete = 0",
             "where p.isDelete = 0",
             "  and c.isDelete = 0",
             "  and c.isEnable = 1",
@@ -53,15 +52,19 @@ public interface ProductMapper {
             "<if test='originPlace != null and originPlace != \"\"'>",
             "  and p.originPlace = #{originPlace}",
             "</if>",
-            "<if test='materialName != null and materialName != \"\"'>",
-            "  and pm.materialName = #{materialName}",
+            "<if test='minPrice != null'>",
+            "  and p.minPrice >= #{minPrice}",
+            "</if>",
+            "<if test='maxPrice != null'>",
+            "  and p.maxPrice &lt;= #{maxPrice}",
             "</if>",
             "order by p.sortOrder desc, p.updateTime desc",
             "</script>"
     })
     List<ProductListItemVO> selectProducts(@Param("categoryId") Long categoryId,
                                            @Param("originPlace") String originPlace,
-                                           @Param("materialName") String materialName,
+                                           @Param("minPrice") Integer minPrice,
+                                           @Param("maxPrice") Integer maxPrice,
                                            @Param("publishedOnly") boolean publishedOnly);
 
     @Select("""
@@ -123,23 +126,24 @@ public interface ProductMapper {
     @Select({
             "<script>",
             """
-            select distinct pm.materialName
-            from product_material pm
-            inner join product p on p.id = pm.productId
+            select distinct sku.materialType
+            from product_sku sku
+            inner join product p on p.id = sku.productId
             inner join category c on c.id = p.categoryId
-            where pm.isDelete = 0
+            where sku.isDelete = 0
               and p.isDelete = 0
               and c.isDelete = 0
               and c.isEnable = 1
-              and pm.materialName is not null
-              and pm.materialName != ''
+              and sku.status = 1
+              and sku.materialType is not null
+              and sku.materialType != ''
             """,
             "<if test='publishedOnly'>",
             "  and p.auditStatus = 1",
             "  and p.status = 1",
             "</if>",
             """
-            order by pm.materialName asc
+            order by sku.materialType asc
             """,
             "</script>"
     })

@@ -4,7 +4,7 @@ import type { ProductDetail, ProductFavorite, ProductListPageData } from '@/type
 type ProductListParams = {
     categoryId?: string
     originPlace?: string
-    materialName?: string
+    priceRange?: string
 }
 
 export function getProductList(params: ProductListParams = {}) {

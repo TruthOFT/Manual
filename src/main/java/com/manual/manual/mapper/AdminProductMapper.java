@@ -71,12 +71,16 @@ public interface AdminProductMapper {
             "       or p.productSubtitle like concat('%', #{keyword}, '%')",
             "       or c.categoryName like concat('%', #{keyword}, '%'))",
             "</if>",
+            "<if test='categoryId != null'>",
+            "  and p.categoryId = #{categoryId}",
+            "</if>",
             "order by case when p.auditStatus = 0 then 0 else 1 end asc, p.updateTime desc, p.id desc",
             "</script>"
     })
     List<AdminProductListItemVO> selectAdminProducts(@Param("auditStatus") Integer auditStatus,
                                                      @Param("status") Integer status,
-                                                     @Param("keyword") String keyword);
+                                                     @Param("keyword") String keyword,
+                                                     @Param("categoryId") Long categoryId);
 
     @Select("""
             select

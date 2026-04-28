@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
-import { message, Modal } from 'ant-design-vue'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { message } from 'ant-design-vue'
+import {
+    PlusOutlined,
+    SearchOutlined,
+    EditOutlined,
+    DeleteOutlined,
+} from '@ant-design/icons-vue'
 
 import { createAdminStaff, deleteAdminStaff, getAdminStaff, getAdminStaffDetail, updateAdminStaff } from '@/api/staff'
 import type { AdminStaff, AdminStaffSaveRequest } from '@/types/staff'
@@ -45,6 +50,17 @@ const form = reactive<AdminStaffSaveRequest>({
 })
 
 const modalTitle = computed(() => (isEditMode.value ? '编辑店员' : '新增店员'))
+const pagination = computed(() => ({
+    pageSize: 10,
+    total: staffList.value.length,
+    showSizeChanger: false,
+    showQuickJumper: false,
+    showTotal: (total: number) => `共 ${total} 条记录`,
+}))
+
+function handleSearch() {
+    void loadStaff()
+}
 
 function resetForm() {
     Object.assign(form, {
@@ -147,17 +163,13 @@ async function handleSave() {
     }
 }
 
-function handleDelete(userId: string) {
-    Modal.confirm({
-        title: '确认删除该店员？',
-        okText: '删除',
-        okType: 'danger',
-        cancelText: '取消',
-        async onOk() {
-            await deleteAdminStaff(userId)
-            await loadStaff()
-        },
-    })
+async function handleDelete(userId: string) {
+    try {
+        await deleteAdminStaff(userId)
+        await loadStaff()
+    } catch (error) {
+        message.error(error instanceof Error ? error.message : '删除店员失败')
+    }
 }
 
 function formatSalary(value: number | null | undefined) {
@@ -170,65 +182,89 @@ onMounted(() => {
 </script>
 
 <template>
-    <a-card class="panel" :bordered="false" title="店员管理">
-        <template #extra>
-            <a-space>
-                <a-button @click="loadStaff">
-                    <ReloadOutlined />
-                    刷新
-                </a-button>
-                <a-button type="primary" @click="openCreateModal">
-                    <PlusOutlined />
-                    新增店员
-                </a-button>
-            </a-space>
-        </template>
-
-        <div class="toolbar">
-            <a-input v-model:value="keyword" size="large" placeholder="搜索账号、姓名、编号或职位" @press-enter="loadStaff" />
-            <a-select v-model:value="staffStatus" allow-clear size="large" placeholder="在职状态">
-                <a-select-option :value="1">在职</a-select-option>
-                <a-select-option :value="0">离职</a-select-option>
-            </a-select>
-            <a-button type="primary" size="large" @click="loadStaff">查询</a-button>
+    <div class="staff-view">
+        <div class="page-header">
+            <div class="header-left">
+                <span class="header-icon">👨‍💼</span>
+                <div>
+                    <h2>店员管理</h2>
+                    <p>管理店员信息，优化门店运营</p>
+                </div>
+            </div>
+            <a-button type="primary" size="large" class="add-btn" @click="openCreateModal">
+                <PlusOutlined />
+                新增店员
+            </a-button>
         </div>
 
-        <a-table :columns="columns" :data-source="staffList" :loading="loading" :pagination="{ pageSize: 8 }" row-key="userId">
-            <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'staffStatus'">
-                    <a-tag :color="record.staffStatus === 1 ? 'green' : 'default'">
-                        {{ record.staffStatus === 1 ? '在职' : '离职' }}
-                    </a-tag>
+        <a-card class="filter-card" :bordered="false">
+            <a-space size="large" wrap>
+                <a-input-search
+                    v-model:value="keyword"
+                    placeholder="搜索店员名称或账号..."
+                    style="width: 280px"
+                    @search="handleSearch"
+                >
+                    <template #prefix>
+                        <SearchOutlined />
+                    </template>
+                </a-input-search>
+            </a-space>
+        </a-card>
+
+        <a-card class="table-card" :bordered="false" :loading="loading">
+            <a-table
+                :columns="columns"
+                :data-source="staffList"
+                :pagination="pagination"
+                row-key="userId"
+            >
+                <template #bodyCell="{ column, record }">
+                    <template v-if="column.key === 'staffStatus'">
+                        <a-tag :color="record.staffStatus === 1 ? 'green' : 'default'">
+                            {{ record.staffStatus === 1 ? '在职' : '离职' }}
+                        </a-tag>
+                    </template>
+
+                    <template v-if="column.key === 'userStatus'">
+                        <a-tag :color="record.userStatus === 1 ? 'red' : 'green'">
+                            {{ record.userStatus === 1 ? '禁用' : '正常' }}
+                        </a-tag>
+                    </template>
+
+                    <template v-if="column.key === 'phone'">
+                        {{ record.phone || '-' }}
+                    </template>
+
+                    <template v-if="column.key === 'positionName'">
+                        {{ record.positionName || '-' }}
+                    </template>
+
+                    <template v-if="column.key === 'salary'">
+                        {{ formatSalary(record.salary) }}
+                    </template>
+
+                    <template v-if="column.key === 'action'">
+                        <a-space>
+                            <a-button type="link" size="small" @click="openEditModal(record.userId)">
+                                <EditOutlined />
+                                编辑
+                            </a-button>
+                            <a-popconfirm
+                                title="确定删除该店员吗？"
+                                @confirm="handleDelete(record.userId)"
+                            >
+                                <a-button type="link" size="small" danger>
+                                    <DeleteOutlined />
+                                    删除
+                                </a-button>
+                            </a-popconfirm>
+                        </a-space>
+                    </template>
                 </template>
-                <template v-else-if="column.key === 'userStatus'">
-                    <a-tag :color="record.userStatus === 1 ? 'red' : 'green'">
-                        {{ record.userStatus === 1 ? '禁用' : '正常' }}
-                    </a-tag>
-                </template>
-                <template v-else-if="column.key === 'phone'">
-                    {{ record.phone || '-' }}
-                </template>
-                <template v-else-if="column.key === 'positionName'">
-                    {{ record.positionName || '-' }}
-                </template>
-                <template v-else-if="column.key === 'salary'">
-                    {{ formatSalary(record.salary) }}
-                </template>
-                <template v-else-if="column.key === 'action'">
-                    <a-space>
-                        <a-button size="small" @click="openEditModal(record.userId)">
-                            <EditOutlined />
-                            编辑
-                        </a-button>
-                        <a-button danger size="small" @click="handleDelete(record.userId)">
-                            <DeleteOutlined />
-                            删除
-                        </a-button>
-                    </a-space>
-                </template>
-            </template>
-        </a-table>
-    </a-card>
+            </a-table>
+        </a-card>
+    </div>
 
     <a-modal
         v-model:open="modalVisible"
@@ -302,25 +338,87 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.panel {
-    border-radius: 28px;
-    background: var(--surface);
-    box-shadow: var(--shadow);
+.staff-view {
+    display: grid;
+    gap: 20px;
 }
 
-.toolbar,
-.form-grid {
-    display: grid;
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
     gap: 16px;
 }
 
-.toolbar {
-    grid-template-columns: minmax(0, 1fr) 220px auto;
-    margin-bottom: 18px;
+.header-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.page-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.page-header p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.add-btn {
+    border-radius: 12px;
+    height: 44px;
+    padding: 0 24px;
+    font-weight: 600;
+}
+
+.filter-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.filter-card :deep(.ant-card-body) {
+    padding: 20px;
+}
+
+.table-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.table-card :deep(.ant-card-body) {
+    padding: 24px;
+}
+
+:deep(.ant-table-thead > tr > th) {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+}
+
+:deep(.ant-table-tbody > tr:hover > td) {
+    background: #f1f5f9;
+}
+
+:deep(.ant-pagination) {
+    margin-top: 20px;
 }
 
 .form-grid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
 }
 
 .full-width {
@@ -328,7 +426,6 @@ onMounted(() => {
 }
 
 @media (max-width: 980px) {
-    .toolbar,
     .form-grid {
         grid-template-columns: 1fr;
     }

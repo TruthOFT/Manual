@@ -12,6 +12,7 @@ import com.manual.manual.model.vo.product.AdminProductMetaVO;
 import com.manual.manual.model.vo.product.AdminProductDetailVO;
 import com.manual.manual.model.vo.product.AdminProductListItemVO;
 import com.manual.manual.service.AdminProductService;
+import com.manual.manual.service.RecommendationService;
 import com.manual.manual.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,9 @@ public class AdminProductServiceImpl implements AdminProductService {
     @Resource
     private UserService userService;
 
+    @Resource
+    private RecommendationService recommendationService;
+
     @Override
     public AdminProductMetaVO getAdminProductMeta(HttpServletRequest request) {
         requireAdmin(request);
@@ -49,9 +53,9 @@ public class AdminProductServiceImpl implements AdminProductService {
     }
 
     @Override
-    public List<AdminProductListItemVO> listAdminProducts(Integer auditStatus, Integer status, String keyword, HttpServletRequest request) {
+    public List<AdminProductListItemVO> listAdminProducts(Integer auditStatus, Integer status, String keyword, Long categoryId, HttpServletRequest request) {
         requireAdmin(request);
-        List<AdminProductListItemVO> products = adminProductMapper.selectAdminProducts(auditStatus, normalizeProductStatusFilter(status), trim(keyword));
+        List<AdminProductListItemVO> products = adminProductMapper.selectAdminProducts(auditStatus, normalizeProductStatusFilter(status), trim(keyword), categoryId);
         if (products == null) {
             return Collections.emptyList();
         }
@@ -107,6 +111,7 @@ public class AdminProductServiceImpl implements AdminProductService {
             adminProductMapper.deleteAdminProductImages(productId);
             adminProductMapper.deleteAdminProductMaterials(productId);
             adminProductMapper.deleteAdminProductSkus(productId);
+            recommendationService.cleanupProductRecommendations(productId);
         }
         return deleted;
     }

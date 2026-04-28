@@ -12,6 +12,7 @@ import com.manual.manual.model.entity.User;
 import com.manual.manual.model.vo.LoginUserVO;
 import com.manual.manual.model.vo.user.AdminUserVO;
 import com.manual.manual.service.RecommendationService;
+import com.manual.manual.service.UploadService;
 import com.manual.manual.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -43,6 +45,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Resource
     @Lazy
     private RecommendationService recommendationService;
+
+    @Resource
+    private UploadService uploadService;
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -269,6 +274,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = getExistingUser(userId);
         user.setBalance(defaultAmount(balance));
         return this.updateById(user);
+    }
+
+    @Override
+    public LoginUserVO uploadAvatar(MultipartFile file, HttpServletRequest request, HttpServletResponse response) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请选择头像文件");
+        }
+        if (!file.getContentType().startsWith("image/")) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "只支持图片文件");
+        }
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "头像文件大小不能超过10MB");
+        }
+        
+        User loginUser = getLoginUser(request);
+        User user = getExistingUser(loginUser.getId());
+        
+        String avatarUrl = uploadService.upload("user", file);
+        user.setAvatarUrl(avatarUrl);
+        
+        boolean updated = this.updateById(user);
+        if (!updated) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新头像失败");
+        }
+        
+        User refreshedUser = getExistingUser(user.getId());
+        persistLoginState(refreshedUser, true, request, response, USER_LOGIN_STATE);
+        return getLoginUserVO(refreshedUser);
     }
 
     private User validateLoginCredentials(String userAccount, String userPassword) {

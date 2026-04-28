@@ -28,28 +28,27 @@ public class ProductController {
     @GetMapping
     public BaseResponse<ProductListPageVO> listProducts(@RequestParam(required = false) Long categoryId,
                                                         @RequestParam(required = false) String originPlace,
-                                                        @RequestParam(required = false) String materialName) {
-        return ResultUtils.success(productService.listProducts(categoryId, originPlace, materialName), "获取商品列表成功");
+                                                        @RequestParam(required = false) String priceRange) {
+        return ResultUtils.success(productService.listProducts(categoryId, originPlace, priceRange));
+    }
+
+    @GetMapping("/{productId}")
+    public BaseResponse<ProductDetailVO> getProductDetail(@PathVariable("productId") Long productId) {
+        return ResultUtils.success(productService.getProductDetail(productId));
     }
 
     @GetMapping("/favorites")
     public BaseResponse<List<ProductFavoriteVO>> listFavorites(HttpServletRequest request) {
-        return ResultUtils.success(productService.listCurrentUserFavorites(request), "获取收藏列表成功");
-    }
-
-    @GetMapping("/{productId}")
-    public BaseResponse<ProductDetailVO> getProductDetail(@PathVariable Long productId,
-                                                          HttpServletRequest request) {
-        return ResultUtils.success(productService.getProductDetail(productId, request), "获取商品详情成功");
+        return ResultUtils.success(productService.listCurrentUserFavorites(request));
     }
 
     @PostMapping("/{productId}/favorite")
-    public BaseResponse<Boolean> favoriteProduct(@PathVariable Long productId, HttpServletRequest request) {
-        return ResultUtils.success(productService.favoriteProduct(productId, request), "收藏成功");
+    public BaseResponse<Boolean> favoriteProduct(@PathVariable("productId") Long productId, HttpServletRequest request) {
+        return ResultUtils.success(productService.favoriteProduct(productId, request));
     }
 
     @DeleteMapping("/{productId}/favorite")
-    public BaseResponse<Boolean> unfavoriteProduct(@PathVariable Long productId, HttpServletRequest request) {
-        return ResultUtils.success(productService.unfavoriteProduct(productId, request), "已取消收藏");
+    public BaseResponse<Boolean> unfavoriteProduct(@PathVariable("productId") Long productId, HttpServletRequest request) {
+        return ResultUtils.success(productService.unfavoriteProduct(productId, request));
     }
 }

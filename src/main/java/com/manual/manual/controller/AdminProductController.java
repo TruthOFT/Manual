@@ -37,8 +37,9 @@ public class AdminProductController {
     public BaseResponse<List<AdminProductListItemVO>> listProducts(@RequestParam(required = false) Integer auditStatus,
                                                                    @RequestParam(required = false) Integer status,
                                                                    @RequestParam(required = false) String keyword,
+                                                                   @RequestParam(required = false) Long categoryId,
                                                                    HttpServletRequest request) {
-        return ResultUtils.success(adminProductService.listAdminProducts(auditStatus, status, keyword, request), "获取商品列表成功");
+        return ResultUtils.success(adminProductService.listAdminProducts(auditStatus, status, keyword, categoryId, request), "获取商品列表成功");
     }
 
     @GetMapping("/{productId}")

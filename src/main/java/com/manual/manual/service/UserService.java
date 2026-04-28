@@ -9,6 +9,7 @@ import com.manual.manual.model.vo.LoginUserVO;
 import com.manual.manual.model.vo.user.AdminUserVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -48,4 +49,6 @@ public interface UserService extends IService<User> {
     boolean updateUserRole(Long userId, String userRole);
 
     boolean updateUserBalance(Long userId, BigDecimal balance);
+
+    LoginUserVO uploadAvatar(MultipartFile file, HttpServletRequest request, HttpServletResponse response);
 }

@@ -12,7 +12,7 @@ public interface AdminProductService {
 
     AdminProductMetaVO getAdminProductMeta(HttpServletRequest request);
 
-    List<AdminProductListItemVO> listAdminProducts(Integer auditStatus, Integer status, String keyword, HttpServletRequest request);
+    List<AdminProductListItemVO> listAdminProducts(Integer auditStatus, Integer status, String keyword, Long categoryId, HttpServletRequest request);
 
     AdminProductDetailVO getAdminProductDetail(Long productId, HttpServletRequest request);
 

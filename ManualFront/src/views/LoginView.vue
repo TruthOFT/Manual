@@ -234,10 +234,14 @@ h2,
 }
 
 h1 {
-    max-width: 11ch;
+    max-width: 15ch;
     margin: 18px 0 16px;
-    font-size: clamp(3rem, 5vw, 5.4rem);
-    line-height: 0.96;
+    font-size: clamp(2.4rem, 4.5vw, 4rem);
+    line-height: 1.4;
+    letter-spacing: 2px;
+    color: #d4a555;
+    font-family: 'KaiTi', 'STKaiti', 'SimSun', 'Georgia', serif;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 h2 {
@@ -251,6 +255,13 @@ h2 {
 .mini-card small,
 .switch-copy {
     color: var(--text);
+}
+
+.lead {
+    color: #e47b5d;
+    font-family: 'KaiTi', 'STKaiti', 'SimSun', 'Georgia', serif;
+    font-size: 1.1rem;
+    line-height: 1.6;
 }
 
 .feature-grid {
@@ -274,6 +285,7 @@ h2 {
     display: block;
     margin: 10px 0 8px;
     font-size: 2rem;
+    color: #d4a555;
 }
 
 .alert {

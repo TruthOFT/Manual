@@ -82,9 +82,6 @@ watch(() => userStore.currentUser?.id, () => {
                 <div class="hero-copy">
                     <p class="eyebrow">手作品牌展示、精选作品、门店商品</p>
                     <h1>探索匠心手作，感受独具温度的品牌美学。</h1>
-                    <p class="lead">
-                        我们致力于为您呈现精选的原创手工作品。浏览多元分类，发现匠心独运的设计；登录后，更可获取为您量身定制的专属推荐，开启个性化美学之旅。
-                    </p>
 
                     <a-space size="middle" wrap>
                         <RouterLink to="/products">
@@ -314,6 +311,7 @@ watch(() => userStore.currentUser?.id, () => {
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    font-family: 'Nunito', sans-serif;
 }
 
 .eyebrow::before {
@@ -330,21 +328,33 @@ h3 {
     margin: 0;
     color: var(--text-strong);
     font-family: var(--font-display);
+    font-weight: 600;
 }
 
 h1 {
     max-width: 12ch;
-    font-size: clamp(3.2rem, 6vw, 5.4rem);
-    line-height: 0.96;
+    font-size: clamp(2.4rem, 4.5vw, 4rem);
+    line-height: 1.4;
+    letter-spacing: 2px;
+    color: #d4a555;
+    font-family: 'KaiTi', 'STKaiti', 'SimSun', 'Georgia', serif;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+h2 {
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 600;
 }
 
 h3 {
     font-size: 1.35rem;
+    font-weight: 500;
 }
 
 .lead,
 .product-card p {
     color: var(--text);
+    font-family: 'Nunito', sans-serif;
 }
 
 .section-head {
@@ -377,6 +387,7 @@ h3 {
     text-transform: uppercase;
     font-size: 0.78rem;
     font-weight: 800;
+    font-family: 'Nunito', sans-serif;
 }
 
 .signal-list {
@@ -499,11 +510,15 @@ h3 {
 .feature-item h3 {
     margin-bottom: 16px;
     color: var(--text-strong);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.5rem;
 }
 
 .feature-item p {
     color: var(--text-muted);
     line-height: 1.6;
+    font-family: 'Nunito', sans-serif;
 }
 
 .cta-banner {
@@ -519,6 +534,9 @@ h3 {
     color: white;
     margin-bottom: 16px;
     font-size: clamp(2rem, 4vw, 2.8rem);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-style: italic;
 }
 
 .cta-banner p {
@@ -528,6 +546,7 @@ h3 {
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    font-family: 'Nunito', sans-serif;
 }
 
 .cta-banner .manual-ant-btn:hover {
@@ -545,11 +564,14 @@ h3 {
     margin-bottom: 24px;
     color: var(--text-strong);
     font-size: 1.2rem;
+    font-family: var(--font-display);
+    font-weight: 600;
 }
 
 .footer-text {
     color: var(--text-muted);
     line-height: 1.8;
+    font-family: 'Nunito', sans-serif;
 }
 
 .footer-links,
@@ -593,7 +615,7 @@ h3 {
         align-items: flex-start;
         flex-direction: column;
     }
-    
+
     .text-center {
         align-items: center;
     }
@@ -631,7 +653,7 @@ h3 {
     :deep(.manual-ant-btn.ant-btn) {
         width: 100%;
     }
-    
+
     .cta-banner {
         padding: 48px 24px;
     }
